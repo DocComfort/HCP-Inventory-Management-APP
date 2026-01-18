@@ -23,8 +23,8 @@ Build settings are auto-detected from `netlify.toml`:
 In Netlify Dashboard → **Site Settings → Environment Variables**, add:
 
 ```bash
-VITE_SUPABASE_URL=https://eawumdjrcwvydvfejkwo.supabase.co
-VITE_SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+VITE_SUPABASE_URL=<your_supabase_project_url>
+VITE_SUPABASE_KEY=<your_supabase_anon_key>
 VITE_API_URL=https://your-backend.railway.app
 ```
 

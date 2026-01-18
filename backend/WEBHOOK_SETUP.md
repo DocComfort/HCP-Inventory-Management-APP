@@ -17,7 +17,7 @@ This application listens for real-time events from Housecall Pro to automaticall
    ```
    Name: Inventory Sync Webhook
    Webhook URL: https://your-domain.com/api/webhooks/hcp
-   Signing Secret: 4beea2b81d3b4f769f3142fba8313fa1
+   Signing Secret: <generate_in_hcp_dashboard>
    ```
 
 4. **Subscribe to Events:**
@@ -159,7 +159,8 @@ $body = @{
 
 $timestamp = [Math]::Floor([decimal](Get-Date -UFormat %s))
 $signatureBody = "$timestamp.$body"
-$hmac = [System.Security.Cryptography.HMACSHA256]::new([System.Text.Encoding]::UTF8.GetBytes("4beea2b81d3b4f769f3142fba8313fa1"))
+$secret = "YOUR_WEBHOOK_SECRET_HERE"  # Replace with actual secret from HCP
+$hmac = [System.Security.Cryptography.HMACSHA256]::new([System.Text.Encoding]::UTF8.GetBytes($secret))
 $signature = [BitConverter]::ToString($hmac.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($signatureBody))).Replace("-", "").ToLower()
 
 Invoke-RestMethod -Uri "http://localhost:3001/api/webhooks/hcp" `
@@ -226,8 +227,8 @@ Reference: `/api/qbwc` endpoint and SOAP service
 
 ```bash
 # Required for webhook functionality
-WEBHOOK_SECRET_HCP=4beea2b81d3b4f769f3142fba8313fa1
-HCP_API_KEY=915dbd7ae3eb42b2ba14615f85284cba
+WEBHOOK_SECRET_HCP=<your_webhook_secret_from_hcp>
+HCP_API_KEY=<your_hcp_api_key>
 HCP_API_URL=https://api.housecallpro.com
 ```
 

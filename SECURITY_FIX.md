@@ -38,8 +38,8 @@ Go to Netlify: https://app.netlify.com → Your Site → **Site settings** → *
 
 | Key | Value | Notes |
 |-----|-------|-------|
-| `VITE_SUPABASE_URL` | `https://eawumdjrcwvydvfejkwo.supabase.co` | Your Supabase project URL |
-| `VITE_SUPABASE_KEY` | `eyJhbGci...` | Anon public key (safe to expose) |
+| `VITE_SUPABASE_URL` | `<your_supabase_project_url>` | Your Supabase project URL |
+| `VITE_SUPABASE_KEY` | `<your_supabase_anon_key>` | Anon public key (safe to expose) |
 | `VITE_API_URL` | `http://localhost:3001` | Temporary - update after Railway deploys |
 
 **⚠️ DO NOT add:**
@@ -62,13 +62,13 @@ Go to Railway: https://railway.app → Your Project → **Variables**
 ```
 PORT=3001
 NODE_ENV=production
-SUPABASE_URL=https://eawumdjrcwvydvfejkwo.supabase.co
+SUPABASE_URL=<your_supabase_project_url>
 SUPABASE_SERVICE_KEY=<NEW_SERVICE_KEY_FROM_STEP_1>
 HCP_API_KEY=<NEW_HCP_API_KEY_FROM_STEP_1>
 HCP_API_URL=https://api.housecallpro.com
 WEBHOOK_SECRET_HCP=<NEW_WEBHOOK_SECRET_FROM_STEP_1>
 QBWC_USERNAME=admin
-QBWC_PASSWORD=secure_password_123
+QBWC_PASSWORD=<your_secure_password>
 ```
 
 After updating, Railway will auto-redeploy with new keys.

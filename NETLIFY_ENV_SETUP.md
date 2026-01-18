@@ -5,8 +5,8 @@
 Netlify hosts your **FRONTEND ONLY**. Only add these 3 variables:
 
 ```
-VITE_SUPABASE_URL=https://eawumdjrcwvydvfejkwo.supabase.co
-VITE_SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhd3VtZGpyY3d2eWR2ZmVqa3dvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3Mjk4MjYsImV4cCI6MjA4NDMwNTgyNn0.QiU6xU41HPmkgEIAgjO_Nv5dV2jEpLdK11pTKTk10HY
+VITE_SUPABASE_URL=<your_supabase_project_url>
+VITE_SUPABASE_KEY=<your_supabase_anon_key>
 VITE_API_URL=https://your-railway-backend-url.up.railway.app
 ```
 

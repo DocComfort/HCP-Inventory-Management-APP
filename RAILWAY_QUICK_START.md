@@ -33,7 +33,7 @@ KEY                        VALUE
 PORT                       3001
 NODE_ENV                   production
 
-SUPABASE_URL               https://eawumdjrcwvydvfejkwo.supabase.co
+SUPABASE_URL               <your_supabase_project_url>
 SUPABASE_SERVICE_KEY       (from Supabase → Settings → API → Service Role Key)
 
 HCP_API_KEY                (from HCP → Account → API Keys)
@@ -143,7 +143,7 @@ Frontend (Netlify)
   ↓ (HTTPS API calls to)
 Backend (Railway)  ← https://hcp-backend-production.up.railway.app
   ↓ (SQL queries)
-Database (Supabase) ← https://eawumdjrcwvydvfejkwo.supabase.co
+Database (Supabase) ← <your_supabase_project_url>
 ```
 
 ---

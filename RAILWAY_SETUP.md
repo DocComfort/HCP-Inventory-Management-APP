@@ -61,8 +61,8 @@ PORT=3001
 NODE_ENV=production
 
 # Supabase Configuration
-SUPABASE_URL=https://eawumdjrcwvydvfejkwo.supabase.co
-SUPABASE_SERVICE_KEY=your_service_role_key_here
+SUPABASE_URL=<your_supabase_project_url>
+SUPABASE_SERVICE_KEY=<your_service_role_key>
 
 # HCP Integration
 HCP_API_KEY=your_hcp_api_key
@@ -131,7 +131,7 @@ This is your `VITE_API_URL` for the frontend!
 
 ```bash
 # Replace with your actual Railway URL
-curl https://your-app-name-production.up.railway.app/health
+curl hcp-inventory-management-app.railway.internal
 
 # Should return:
 # {"status":"OK","timestamp":"2026-01-18T..."}

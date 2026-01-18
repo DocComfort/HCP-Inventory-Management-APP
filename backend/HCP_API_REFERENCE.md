@@ -100,14 +100,14 @@ https://api.housecallpro.com
 ### Local Testing with curl
 ```bash
 curl -X GET "https://api.housecallpro.com/jobs" \
-  -H "Authorization: Token 915dbd7ae3eb42b2ba14615f85284cba" \
+  -H "Authorization: Token YOUR_HCP_API_KEY" \
   -H "Content-Type: application/json"
 ```
 
 ### Test Specific Job
 ```bash
 curl -X GET "https://api.housecallpro.com/jobs/{job_id}/line_items" \
-  -H "Authorization: Token 915dbd7ae3eb42b2ba14615f85284cba" \
+  -H "Authorization: Token YOUR_HCP_API_KEY" \
   -H "Content-Type: application/json"
 ```
 
