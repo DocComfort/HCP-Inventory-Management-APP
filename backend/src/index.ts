@@ -56,8 +56,16 @@ process.on('SIGTERM', () => {
 });
 
 // Middleware
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:8080',
+  process.env.APP_URL,
+  process.env.FRONTEND_URL,
+  process.env.NETLIFY_URL,
+].filter(Boolean) as string[];
+
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:8080', process.env.APP_URL].filter(Boolean) as string[],
+  origin: allowedOrigins,
   credentials: true
 }));
 
