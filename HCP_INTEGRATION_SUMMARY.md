@@ -306,7 +306,7 @@ WEBHOOK_SECRET_HCP=<signing_secret_from_webhook_app>
 HCP_API_URL=https://api.housecallpro.com
 
 # Supabase (Database)
-SUPABASE_URL=https://eawumdjrcwvydvfejkwo.supabase.co
+SUPABASE_URL=<your_supabase_project_url>
 SUPABASE_SERVICE_KEY=<service_role_key>
 
 # Server

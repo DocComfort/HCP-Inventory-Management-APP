@@ -5,12 +5,16 @@
   publish = "dist"
   
   # Environment variables (set these in Netlify UI)
-  # VITE_SUPABASE_URL
-  # VITE_SUPABASE_KEY
-  # VITE_API_URL
+  # VITE_SUPABASE_URL - safe to expose (public URL only)
+  # VITE_SUPABASE_KEY - safe to expose (anon key with limited permissions)
+  # VITE_API_URL - safe to expose (public backend URL)
 
 [build.environment]
   NODE_VERSION = "18"
+
+# Secrets scanning: VITE_ variables are expected in the build output
+# These are frontend variables with limited permissions, not sensitive secrets
+SECRETS_SCAN_OMIT_KEYS = "VITE_SUPABASE_URL,VITE_SUPABASE_KEY,VITE_API_URL"
 
 # Redirect all requests to index.html for SPA routing
 [[redirects]]
