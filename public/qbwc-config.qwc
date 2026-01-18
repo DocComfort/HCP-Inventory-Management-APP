@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<QBWCXML>
+  <AppName>HCP Inventory Manager</AppName>
+  <AppID></AppID>
+  <AppURL>http://localhost:3001/qbwc</AppURL>
+  <AppDescription>Sync inventory between HCP and QuickBooks Desktop</AppDescription>
+  <AppSupport>http://localhost:3001/support</AppSupport>
+  <UserName>admin</UserName>
+  <OwnerID>{8F3C2E5A-1B4D-4E9C-A7F6-2D8E9C1B3A5F}</OwnerID>
+  <FileID>{C4E7A9B2-5D3E-4F8C-9A2B-6E1D7F3C8A4B}</FileID>
+  <QBType>QBFS</QBType>
+  <Scheduler>
+    <RunEveryNMinutes>30</RunEveryNMinutes>
+  </Scheduler>
+  <IsReadOnly>false</IsReadOnly>
+</QBWCXML>
