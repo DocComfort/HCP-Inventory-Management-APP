@@ -17,29 +17,73 @@ export interface IntegrationStatus {
 // QuickBooks Online Integration
 export const qboIntegration = {
   // Get OAuth authorization URL
-  async getAuthUrl(clientId: string, clientSecret: string, redirectUri: string) {
-    throw new Error('QBO OAuth setup not yet implemented. Please use the backend OAuth flow.');
+  async getAuthUrl(organizationId: string) {
+    try {
+      const response = await fetch(`${API_URL}/api/oauth/qbo/authorize?org_id=${organizationId}`, {
+        method: 'GET',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to get QBO auth URL');
+      }
+      
+      // Response is a redirect, return the URL from headers or body
+      return response.url;
+    } catch (error) {
+      throw new Error(`QBO OAuth setup failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   },
 
   // Handle OAuth callback
-  async handleCallback(code: string, realmId: string, state: string) {
-    throw new Error('QBO OAuth callback not yet implemented.');
+  async handleCallback(code: string, state: string, realmId: string) {
+    // This is handled by the backend redirect
+    // Frontend just receives the redirect back
+    return { success: true, message: 'QBO connected successfully' };
   },
 
   // Refresh access token
-  async refreshToken() {
-    throw new Error('QBO token refresh not yet implemented.');
+  async refreshToken(organizationId: string) {
+    try {
+      const response = await fetch(`${API_URL}/api/oauth/refresh/qbo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ organizationId })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to refresh QBO token');
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      throw new Error(`QBO token refresh failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   },
 
   // Disconnect
-  async disconnect() {
-    throw new Error('QBO disconnect not yet implemented.');
+  async disconnect(organizationId: string) {
+    try {
+      const response = await fetch(`${API_URL}/api/oauth/disconnect/qbo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ organizationId })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to disconnect QBO');
+      }
+      
+      return { success: true, message: 'Disconnected from QBO' };
+    } catch (error) {
+      throw new Error(`QBO disconnect failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   },
 
   // Get connection status
-  async getStatus(): Promise<IntegrationStatus> {
+  async getStatus(organizationId: string = 'default'): Promise<IntegrationStatus> {
     try {
-      const response = await fetch(`${API_URL}/api/oauth/qbo/status`, {
+      const response = await fetch(`${API_URL}/api/oauth/status/qbo?org_id=${organizationId}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -62,22 +106,75 @@ export const qboIntegration = {
   },
 
   // Sync inventory items from QBO
-  async syncItems() {
-    return { items: [], synced: 0 };
+  async syncItems(organizationId: string = 'default') {
+    try {
+      const response = await fetch(`${API_URL}/api/sync/qbo/items`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ organization_id: organizationId })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to sync items from QBO');
+      }
+      
+      const data = await response.json();
+      return { items: data.items || [], synced: data.imported || 0 };
+    } catch (error) {
+      throw new Error(`QBO items sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   },
 
   // Sync vendors from QBO
-  async syncVendors() {
-    return { vendors: [], synced: 0 };
+  async syncVendors(organizationId: string = 'default') {
+    try {
+      const response = await fetch(`${API_URL}/api/sync/qbo/vendors`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ organization_id: organizationId })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to sync vendors from QBO');
+      }
+      
+      const data = await response.json();
+      return { vendors: data.vendors || [], synced: data.imported || 0 };
+    } catch (error) {
+      throw new Error(`QBO vendors sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   },
 
   // Create purchase order in QBO
-  async createPurchaseOrder(vendorId: string, lines: any[], memo?: string) {
-    throw new Error('QBO purchase order creation not yet implemented.');
+  async createPurchaseOrder(vendorId: string, lines: any[], memo?: string, organizationId: string = 'default') {
+    try {
+      const response = await fetch(`${API_URL}/api/sync/qbo/purchase-order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          organization_id: organizationId,
+          vendor_id: vendorId,
+          lines,
+          memo
+        })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create purchase order');
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      throw new Error(`QBO PO creation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   },
 
   // Get classes (locations) from QBO
-  async getClasses() {
+  async getClasses(organizationId: string = 'default') {
     return { classes: [] };
   },
 };
@@ -221,69 +318,64 @@ export const qbdIntegration = {
   },
 
   // Get connection status
-  async getStatus(): Promise<IntegrationStatus> {
-    // TODO: Implement backend API for QBD status
-    // For now, return disconnected status to avoid Supabase query errors
-    return { platform: 'qbd', connected: false, lastSync: null };
-    
-    /*
-    const { data, error } = await supabase
-      .from('integration_credentials')
-      .select('is_connected, middleware_url, last_sync_at')
-      .eq('platform', 'qbd')
-      .single();
-    
-    if (error) {
+  async getStatus(organizationId: string = 'default'): Promise<IntegrationStatus> {
+    try {
+      const response = await fetch(`${API_URL}/api/oauth/status/qbd?org_id=${organizationId}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (!response.ok) {
+        return { platform: 'qbd', connected: false, lastSync: null };
+      }
+      
+      const data = await response.json();
+      return {
+        platform: 'qbd',
+        connected: data.connected,
+        lastSync: data.lastSync || null,
+      };
+    } catch (error) {
       return { platform: 'qbd', connected: false, lastSync: null };
     }
-    
-    return {
-      platform: 'qbd',
-      connected: data?.is_connected || false,
-      lastSync: data?.last_sync_at,
-    };
-    */
   },
 
-  // Sync via middleware (Autymate/MyWorks)
-  async syncInventory() {
-    // TODO: Implement backend API for QBD sync
-    throw new Error('QBD sync not yet implemented. Please configure via backend API.');
-    
-    /*
-    const { data: credentials } = await supabase
-      .from('integration_credentials')
-      .select('middleware_url, api_key')
-      .eq('platform', 'qbd')
-      .single();
-
-    if (!credentials?.middleware_url) {
-      throw new Error('QBD middleware not configured');
+  // Sync via QBWC (QB Desktop Web Connector)
+  async syncInventory(organizationId: string = 'default') {
+    try {
+      const response = await fetch(`${API_URL}/api/sync/qbd/import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ organization_id: organizationId })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to sync with QuickBooks Desktop');
+      }
+      
+      const data = await response.json();
+      return { success: true, synced: data.synced || 0, message: data.message };
+    } catch (error) {
+      throw new Error(`QBD sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  },
 
-    // Call middleware API
-    const response = await fetch(`${credentials.middleware_url}/api/inventory/sync`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${credentials.api_key}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to sync with QuickBooks Desktop');
+  // Download .qwc file for QBWC installation
+  async downloadQWCFile(organizationId: string = 'default') {
+    try {
+      const response = await fetch(`${API_URL}/api/qbwc/download-qwc?org_id=${organizationId}`, {
+        method: 'GET'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to download QWC file');
+      }
+      
+      return response.blob();
+    } catch (error) {
+      throw new Error(`QWC download failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-
-    const result = await response.json();
-
-    // Update last sync time
-    await supabase
-      .from('integration_credentials')
-      .update({ last_sync_at: new Date().toISOString() })
-      .eq('platform', 'qbd');
-
-    return result;
-    */
   },
 };
 
