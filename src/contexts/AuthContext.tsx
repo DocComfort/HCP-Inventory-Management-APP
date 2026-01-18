@@ -9,25 +9,9 @@ export type { UserRole, AppUser } from './AuthContextType';
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(false); // Set to false for local testing
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // For local testing, create a mock user
-    const mockUser: AppUser = {
-      id: 'local-user-001',
-      email: 'admin@local.test',
-      role: 'admin',
-      organizationId: 'default',
-      technicianId: null,
-      aud: 'authenticated',
-      created_at: new Date().toISOString()
-    };
-    
-    setUser(mockUser);
-    setLoading(false);
-    
-    // Commented out for local testing - uncomment when Supabase is configured
-    /*
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -52,7 +36,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-    */
   }, []);
 
   const loadUserProfile = async (authUser: User) => {
@@ -110,8 +93,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      setUser(null);
+      setSession(null);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const hasPermission = (requiredRole: UserRole): boolean => {
