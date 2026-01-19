@@ -251,16 +251,18 @@ export const hcpIntegration = {
 
   // Sync invoices from HCP (uses Netlify Function proxy for security)
   async syncInvoices(startDate?: string, endDate?: string) {
-    const response = await apiClient.post('/.netlify/functions/sync-hcp-invoices', {
-      startDate,
-      endDate
+    const response = await fetch('/.netlify/functions/sync-hcp-invoices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ startDate, endDate })
     });
     
     if (!response.ok) {
-      throw new Error(response.error?.message || 'Failed to sync HCP invoices');
+      const error = await response.json().catch(() => ({ message: 'Failed to sync HCP invoices' }));
+      throw new Error(error.message || 'Failed to sync HCP invoices');
     }
     
-    return response.data;
+    return response.json();
   },
 
   // Sync items/products from HCP
