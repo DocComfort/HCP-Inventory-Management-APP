@@ -160,7 +160,7 @@ PORT=3001
 ```bash
 VITE_API_BASE_URL=https://your-app.railway.app
 VITE_SUPABASE_URL=https://xxx.supabase.co
-VITE_SUPABASE_ANON_KEY=<public-key>
+VITE_SUPABASE_KEY=<public-key>
 RAILWAY_API_BASE_URL=https://your-app.railway.app
 INTEGRATIONS_API_KEY=<same-as-railway>
 ```

@@ -21,7 +21,7 @@ Set these in **Netlify Dashboard → Site Settings → Environment Variables**:
 |----------|-------------|---------|----------|
 | `VITE_API_BASE_URL` | Railway backend URL | `https://your-app.railway.app` | ✅ Yes |
 | `VITE_SUPABASE_URL` | Supabase project URL | `https://xxx.supabase.co` | ✅ Yes |
-| `VITE_SUPABASE_ANON_KEY` | Supabase anon/public key | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` | ✅ Yes |
+| `VITE_SUPABASE_KEY` | Supabase anon/public key | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` | ✅ Yes |
 | `RAILWAY_API_BASE_URL` | Railway backend URL (for Functions) | `https://your-app.railway.app` | ✅ Yes |
 | `INTEGRATIONS_API_KEY` | Secret key for Netlify→Railway auth | Min 32 chars, e.g., `your-secure-random-key-min-32-characters-long` | ✅ Yes |
 

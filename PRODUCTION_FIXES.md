@@ -136,7 +136,7 @@ const response = await apiClient.post('/.netlify/functions/sync-hcp-invoices', {
 ```bash
 VITE_API_BASE_URL=https://your-app.railway.app
 VITE_SUPABASE_URL=https://xxx.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJ...
+VITE_SUPABASE_KEY=eyJ...
 RAILWAY_API_BASE_URL=https://your-app.railway.app    # NEW NAME
 INTEGRATIONS_API_KEY=your-secure-key-min-32-chars    # NEW NAME
 ```
