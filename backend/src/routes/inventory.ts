@@ -269,7 +269,7 @@ router.post('/sync/hcp/items', async (req, res) => {
     
     // Fetch pricebook materials from HCP with retry logic
     const materials = await RetryService.withRetry(async () => {
-      const response = await axios.get('https://api.housecallpro.com/price_book/materials', {
+      const response = await axios.get('https://api.housecallpro.com/api/price_book/materials', {
         headers: {
           'Authorization': `Token ${hcpToken}`,
           'Content-Type': 'application/json'
