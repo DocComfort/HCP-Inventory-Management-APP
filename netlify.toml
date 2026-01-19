@@ -9,7 +9,7 @@
 
 # Tell secrets scanner these VITE_* keys are safe to expose (they're public Supabase anon keys)
 # Must be at root level, not nested under [build]
-SECRETS_SCAN_OMIT_KEYS = "VITE_SUPABASE_URL,VITE_SUPABASE_KEY,VITE_SUPABASE_ANON_KEY,VITE_API_BASE_URL"
+SECRETS_SCAN_OMIT_KEYS = "VITE_SUPABASE_URL,VITE_SUPABASE_KEY,VITE_SUPABASE_ANON_KEY,VITE_API_BASE_URL,VITE_API_URL"
 
 # Exclude documentation files from secrets scanning
 SECRETS_SCAN_OMIT_PATHS = "**.md,**/docs/**"
