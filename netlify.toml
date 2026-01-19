@@ -19,7 +19,6 @@ SECRETS_SCAN_OMIT_PATHS = "**.md,**/docs/**"
   from = "/*"
   to = "/index.html"
   status = 200
-  conditions = {Role = ["*"]}
   force = false
 
 # Headers for security
