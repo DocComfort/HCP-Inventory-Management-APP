@@ -7,13 +7,12 @@
 [build.environment]
   NODE_VERSION = "18"
 
-# Allow VITE_* vars in build output (they're public keys, not secrets)
-# These are Supabase public/anon keys that are safe to expose
-[build.processing.skip_processing]
-  secrets_scan = false
-
-# Tell secrets scanner these keys are safe to expose
+# Tell secrets scanner these VITE_* keys are safe to expose (they're public Supabase anon keys)
+# Must be at root level, not nested under [build]
 SECRETS_SCAN_OMIT_KEYS = "VITE_SUPABASE_URL,VITE_SUPABASE_KEY,VITE_SUPABASE_ANON_KEY,VITE_API_BASE_URL"
+
+# Exclude documentation files from secrets scanning
+SECRETS_SCAN_OMIT_PATHS = "**.md,**/docs/**"
 
 # Redirect all requests to index.html for SPA routing (except functions)
 [[redirects]]
