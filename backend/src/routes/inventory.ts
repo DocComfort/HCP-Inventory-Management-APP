@@ -4,10 +4,15 @@ import { supabase } from '../config/supabase.js';
 import { SyncService } from '../services/sync.service.js';
 import { OAuth2Service } from '../services/oauth.service.js';
 import { RetryService } from '../services/retry.service.js';
+import { sendSuccess, sendError } from '../middleware/requestId.js';
+import { validateIntegrationsKey } from '../middleware/integrationsKey.js';
 
 const router = express.Router();
 const syncService = new SyncService();
 const oauthService = new OAuth2Service();
+
+// Protect all /sync endpoints with integrations key
+router.use('/sync', validateIntegrationsKey);
 
 // Get all inventory items
 router.get('/items', async (req, res) => {
@@ -142,18 +147,30 @@ router.post('/sync/qbd/import', async (req, res) => {
   }
 });
 
-// HCP endpoints (added for consistency with frontend calls)
+// HCP endpoints (protected by router.use('/sync', validateIntegrationsKey) above)
 router.post('/sync/hcp/invoices', async (req, res) => {
+  const routeName = 'POST /api/inventory/sync/hcp/invoices';
+  
   try {
+    // Validate environment variables
+    const missingVars: string[] = [];
+    if (!process.env.SUPABASE_URL) missingVars.push('SUPABASE_URL');
+    if (!process.env.SUPABASE_SERVICE_KEY) missingVars.push('SUPABASE_SERVICE_KEY');
+    
+    if (missingVars.length > 0) {
+      console.error(`❌ [${req.requestId}] ${routeName}: Missing environment variables:`, missingVars);
+      return sendError(res, 'ENV_VALIDATION_ERROR', 'Missing required environment variables', 500, { missing: missingVars });
+    }
+    
     const organizationId = '00000000-0000-0000-0000-000000000001';
     const { startDate, endDate } = req.body;
     
-    console.log(`📄 HCP invoices sync requested: ${startDate} to ${endDate}`);
+    console.log(`📄 [${req.requestId}] ${routeName}: Sync requested (${startDate || 'all'} to ${endDate || 'now'})`);
     
     // Get HCP API token
     const hcpToken = await oauthService.getHCPAccessToken(organizationId);
     if (!hcpToken) {
-      return res.status(400).json({ error: 'HCP not connected. Please authenticate first.' });
+      return sendError(res, 'HCP_NOT_CONNECTED', 'HCP not connected. Please authenticate first.', 400);
     }
     
     // Build query parameters
@@ -161,20 +178,21 @@ router.post('/sync/hcp/invoices', async (req, res) => {
     if (startDate) params.start_date = startDate;
     if (endDate) params.end_date = endDate;
     
-    // Fetch invoices from HCP with retry logic
+    // Fetch invoices from HCP with retry logic and timeout
     const invoices = await RetryService.withRetry(async () => {
       const response = await axios.get('https://api.housecallpro.com/invoices', {
         headers: {
           'Authorization': `Token ${hcpToken}`,
           'Content-Type': 'application/json'
         },
-        params
+        params,
+        timeout: 15000 // 15 second timeout
       });
       
       return response.data.invoices || response.data.data || [];
     });
     
-    console.log(`📄 Retrieved ${invoices.length} invoices from HCP`);
+    console.log(`📄 [${req.requestId}] ${routeName}: Retrieved ${invoices.length} invoices from HCP`);
     
     // Log sync operation
     await supabase.from('sync_logs').insert({
@@ -186,23 +204,55 @@ router.post('/sync/hcp/invoices', async (req, res) => {
       response_data: { invoices_retrieved: invoices.length }
     });
     
-    res.json({ 
-      success: true, 
+    sendSuccess(res, { 
       invoices_synced: invoices.length,
       message: `Successfully synced ${invoices.length} invoices from HCP`
     });
   } catch (error: any) {
-    console.error('❌ Error syncing HCP invoices:', error.message);
+    const isAxiosError = error.response !== undefined;
+    const upstreamStatus = error.response?.status;
     
+    // Map upstream errors to appropriate status codes
+    let statusCode = 500;
+    let errorCode = 'INTERNAL_ERROR';
+    let errorMessage = error.message;
+    
+    if (isAxiosError) {
+      console.error(`❌ [${req.requestId}] ${routeName}: Upstream HCP error - Status ${upstreamStatus}`);
+      
+      if (upstreamStatus === 401 || upstreamStatus === 403) {
+        statusCode = 401;
+        errorCode = 'HCP_AUTH_FAILED';
+        errorMessage = 'HCP authentication failed. Please reconnect.';
+      } else if (upstreamStatus === 429) {
+        statusCode = 429;
+        errorCode = 'HCP_RATE_LIMIT';
+        errorMessage = 'HCP rate limit exceeded. Please try again later.';
+      } else if (upstreamStatus >= 500) {
+        statusCode = 502;
+        errorCode = 'HCP_SERVICE_UNAVAILABLE';
+        errorMessage = 'HCP service unavailable. Please try again later.';
+      }
+      
+      // Log truncated response body (no tokens)
+      if (error.response?.data) {
+        const bodyStr = JSON.stringify(error.response.data).substring(0, 500);
+        console.error(`❌ [${req.requestId}] Response body (truncated):`, bodyStr);
+      }
+    } else {
+      console.error(`❌ [${req.requestId}] ${routeName}: Internal error:`, error.message);
+    }
+    
+    // Log failed sync
     await supabase.from('sync_logs').insert({
       organization_id: '00000000-0000-0000-0000-000000000001',
       sync_type: 'hcp_invoices',
       provider: 'hcp',
       status: 'failed',
-      error_message: error.message
-    });
+      error_message: errorMessage
+    }).catch(err => console.error('Failed to log error:', err));
     
-    res.status(500).json({ error: error.message });
+    sendError(res, errorCode, errorMessage, statusCode);
   }
 });
 

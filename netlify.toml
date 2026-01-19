@@ -1,33 +1,41 @@
 # Netlify Build Configuration
 [build]
-  # Frontend build
   command = "npm run build"
   publish = "dist"
-  
-  # Environment variables (set these in Netlify UI)
-  # VITE_SUPABASE_URL - safe to expose (public URL only)
-  # VITE_SUPABASE_KEY - safe to expose (anon key with limited permissions)
-  # VITE_API_URL - safe to expose (public backend URL)
+  functions = "netlify/functions"
 
 [build.environment]
   NODE_VERSION = "18"
 
-# Secrets scanning: VITE_ variables are expected in the build output
-# These are frontend variables with limited permissions, not sensitive secrets
-SECRETS_SCAN_OMIT_KEYS = "VITE_SUPABASE_URL,VITE_SUPABASE_KEY,VITE_API_URL"
-
-# Redirect all requests to index.html for SPA routing
+# Redirect all requests to index.html for SPA routing (except functions)
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-
-# API proxy to backend (optional - if deploying backend separately)
-[[redirects]]
-  from = "/api/*"
-  to = "https://your-backend-url.com/api/:splat"
-  status = 200
+  conditions = {Role = ["*"]}
   force = false
+
+# Headers for security
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
+
+# Headers for static assets (cache for 1 year)
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Note: Environment variables to set in Netlify Dashboard:
+# - VITE_API_BASE_URL (Railway backend URL)
+# - VITE_SUPABASE_URL (Supabase project URL)
+# - VITE_SUPABASE_ANON_KEY (Supabase anon key - safe to expose)
+# - INTEGRATIONS_KEY (Secret key for Netlify Functions - NOT exposed to frontend)
+
 
 # Headers for security
 [[headers]]

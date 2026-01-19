@@ -8,11 +8,16 @@ import { oauthRouter } from './routes/oauth.js';
 import { webhookRouter } from './routes/webhooks.js';
 import { inventoryRouter } from './routes/inventory.js';
 import { JobSyncService } from './services/jobSync.service.js';
+import { validateEnv, getAllowedOrigins } from './config/env.js';
+import { requestIdMiddleware } from './middleware/requestId.js';
 
 dotenv.config();
 
+// Validate environment variables first (fail fast)
+const env = validateEnv();
+
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = env.PORT || 3001;
 
 // Initialize JobSyncService with error handling
 let jobSyncService: JobSyncService;
@@ -55,28 +60,53 @@ process.on('SIGTERM', () => {
   process.exit(0);
 });
 
-// Middleware
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:8080',
-  process.env.APP_URL,
-  process.env.FRONTEND_URL,
-  process.env.NETLIFY_URL,
-].filter(Boolean) as string[];
+// Request ID middleware (must be before routes)
+app.use(requestIdMiddleware);
+
+// CORS with validated allowed origins
+const allowedOrigins = getAllowedOrigins(env);
+console.log('✅ CORS configured for origins:', allowedOrigins);
 
 app.use(cors({
-  origin: allowedOrigins,
-  credentials: true
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`⚠️  Blocked CORS request from: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-integrations-key', 'x-request-id']
 }));
+
+// Handle OPTIONS preflight requests
+app.options('*', cors());
 
 // Body parser with different settings for different routes
 app.use('/api/webhooks', bodyParser.raw({ type: 'application/json' }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Health check
+// Health check (legacy)
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Enhanced health check with config flags
+app.get('/api/health', (req, res) => {
+  res.json({
+    ok: true,
+    env: process.env.NODE_ENV ?? 'development',
+    timestamp: new Date().toISOString(),
+    requestId: req.requestId,
+    integrationsKeyConfigured: Boolean(process.env.INTEGRATIONS_API_KEY),
+    allowedOriginsCount: allowedOrigins.length
+  });
 });
 
 // Initialize SOAP service for QBWC (must be before other routes)

@@ -272,7 +272,14 @@ const IntegrationsView: React.FC<IntegrationsViewProps> = ({
     try {
       const organizationId = '00000000-0000-0000-0000-000000000001'; // TODO: Get from auth context
       
-      const response = await fetch(`http://localhost:3001/api/inventory/sync/${platform}/import`, {
+      // Call Netlify Function instead of direct API
+      const functionPath = platform === 'hcp' 
+        ? '/.netlify/functions/sync-hcp-import'
+        : platform === 'qbd'
+        ? '/.netlify/functions/sync-qbd-import'
+        : `/api/inventory/sync/${platform}/import`; // fallback for other platforms
+      
+      const response = await fetch(functionPath, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ organization_id: organizationId })
@@ -295,7 +302,7 @@ const IntegrationsView: React.FC<IntegrationsViewProps> = ({
       // Auto-link items
       if (result.imported > 0 || result.updated > 0) {
         toast.info('Auto-linking items between systems...');
-        await fetch(`http://localhost:3001/api/inventory/sync/autolink`, {
+        await fetch(`/api/inventory/sync/autolink`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ organization_id: organizationId })
