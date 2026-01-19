@@ -343,7 +343,7 @@ export const qbdIntegration = {
   // Sync via QBWC (QB Desktop Web Connector)
   async syncInventory(organizationId: string = 'default') {
     try {
-      const response = await fetch(`${API_URL}/api/sync/qbd/import`, {
+      const response = await fetch(`${API_URL}/api/inventory/sync/qbd/import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ organization_id: organizationId })
