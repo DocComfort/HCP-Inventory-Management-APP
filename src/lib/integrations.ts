@@ -267,7 +267,7 @@ export const hcpIntegration = {
 
   // Sync items/products from HCP
   async syncItems() {
-    const response = await fetch(`/api/inventory/sync/hcp/items`, {
+    const response = await fetch(`${BACKEND_URL}/api/inventory/sync/hcp/items`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({})
@@ -279,7 +279,7 @@ export const hcpIntegration = {
 
   // Get technicians
   async getTechnicians() {
-    const response = await fetch(`/api/inventory/sync/hcp/technicians`, {
+    const response = await fetch(`${BACKEND_URL}/api/inventory/sync/hcp/technicians`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' }
     });
