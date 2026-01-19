@@ -339,12 +339,12 @@ router.post('/sync/hcp/items', async (req, res) => {
       try {
         const { uuid, name, description, cost, price, part_number, material_category_name } = material;
         
-        // Check if item already exists
+        // Check if item already exists by HCP ID
         const { data: existing } = await supabase
           .from('inventory_items')
           .select('id')
           .eq('organization_id', organizationId)
-          .eq('sku', part_number || uuid)
+          .eq('hcp_id', uuid)
           .maybeSingle();
         
         if (existing) {
@@ -354,9 +354,11 @@ router.post('/sync/hcp/items', async (req, res) => {
             .update({
               name,
               description,
-              cost: cost ? cost / 100 : undefined, // Convert cents to dollars
-              price: price ? price / 100 : undefined,
-              last_updated: new Date().toISOString()
+              unit_cost: cost ? cost / 100 : undefined, // Convert cents to dollars
+              unit_price: price ? price / 100 : undefined,
+              sku: part_number || uuid,
+              category: material_category_name || 'Uncategorized',
+              updated_at: new Date().toISOString()
             })
             .eq('id', existing.id);
           
@@ -367,12 +369,14 @@ router.post('/sync/hcp/items', async (req, res) => {
             .from('inventory_items')
             .insert({
               organization_id: organizationId,
+              hcp_id: uuid,
               name,
               description,
               sku: part_number || uuid,
-              cost: cost ? cost / 100 : 0,
-              price: price ? price / 100 : 0,
-              category: material_category_name || 'Uncategorized'
+              unit_cost: cost ? cost / 100 : 0,
+              unit_price: price ? price / 100 : 0,
+              category: material_category_name || 'Uncategorized',
+              item_type: 'material'
             });
           
           itemsCreated++;
@@ -409,6 +413,134 @@ router.post('/sync/hcp/items', async (req, res) => {
     await supabase.from('sync_logs').insert({
       organization_id: '00000000-0000-0000-0000-000000000001',
       sync_type: 'hcp_items',
+      provider: 'hcp',
+      status: 'failed',
+      error_message: error.message
+    });
+    
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Sync HCP services endpoint
+router.post('/sync/hcp/services', async (req, res) => {
+  try {
+    const organizationId = '00000000-0000-0000-0000-000000000001';
+    console.log('🛠️ Syncing HCP services...');
+    
+    // Get HCP API token
+    const hcpToken = await oauthService.getHCPAccessToken(organizationId);
+    if (!hcpToken) {
+      return res.status(400).json({ error: 'HCP not connected. Please authenticate first.' });
+    }
+    
+    let allServices: any[] = [];
+    let currentPage = 1;
+    let totalPages = 1;
+    
+    // Fetch all services with pagination
+    while (currentPage <= totalPages) {
+      console.log(`📄 Fetching services page ${currentPage}...`);
+      
+      const response = await RetryService.withRetry(async () => {
+        return await axios.get('https://api.housecallpro.com/api/price_book/services', {
+          headers: {
+            'Authorization': `Token ${hcpToken}`,
+            'Content-Type': 'application/json'
+          },
+          params: {
+            page: currentPage,
+            page_size: 100,
+            sort_by: 'created_at',
+            sort_direction: 'desc'
+          }
+        });
+      });
+      
+      const servicesData = response.data.data || [];
+      allServices = allServices.concat(servicesData);
+      
+      totalPages = response.data.total_pages || 1;
+      console.log(`✅ Page ${currentPage}/${totalPages}: ${servicesData.length} services`);
+      
+      currentPage++;
+    }
+    
+    console.log(`📊 Total services retrieved: ${allServices.length}`);
+    
+    // Process and insert/update services
+    let insertedCount = 0;
+    let updatedCount = 0;
+    
+    for (const service of allServices) {
+      try {
+        // Check if service already exists
+        const { data: existing } = await supabase
+          .from('inventory_items')
+          .select('id')
+          .eq('hcp_id', service.uuid)
+          .eq('organization_id', organizationId)
+          .single();
+        
+        const itemData = {
+          organization_id: organizationId,
+          hcp_id: service.uuid,
+          name: service.name,
+          description: service.description || '',
+          sku: service.task_number || service.uuid,
+          category: service.category?.name || 'Service',
+          unit_cost: service.cost ? service.cost / 100 : 0,
+          unit_price: service.price ? service.price / 100 : 0,
+          item_type: 'service',
+          taxable: service.taxable || false,
+          flat_rate_enabled: service.flat_rate_enabled || false,
+          online_booking_enabled: service.online_booking_enabled || false,
+          duration: service.duration || null,
+          image_url: service.image || null,
+          unit_of_measure: service.unit_of_measure || 'each'
+        };
+        
+        if (existing) {
+          await supabase
+            .from('inventory_items')
+            .update(itemData)
+            .eq('id', existing.id);
+          updatedCount++;
+        } else {
+          await supabase
+            .from('inventory_items')
+            .insert(itemData);
+          insertedCount++;
+        }
+      } catch (itemError: any) {
+        console.error(`⚠️ Error processing service ${service.uuid}:`, itemError.message);
+      }
+    }
+    
+    console.log(`✅ Services sync complete: ${insertedCount} inserted, ${updatedCount} updated`);
+    
+    await supabase.from('sync_logs').insert({
+      organization_id: organizationId,
+      sync_type: 'hcp_services',
+      provider: 'hcp',
+      status: 'completed',
+      items_synced: allServices.length,
+      metadata: {
+        inserted: insertedCount,
+        updated: updatedCount
+      }
+    });
+    
+    res.json({ 
+      success: true, 
+      message: `Synced ${allServices.length} services from HCP (${insertedCount} new, ${updatedCount} updated)`
+    });
+  } catch (error: any) {
+    console.error('❌ Error syncing HCP services:', error.message);
+    
+    await supabase.from('sync_logs').insert({
+      organization_id: '00000000-0000-0000-0000-000000000001',
+      sync_type: 'hcp_services',
       provider: 'hcp',
       status: 'failed',
       error_message: error.message

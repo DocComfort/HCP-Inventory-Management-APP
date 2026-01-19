@@ -277,6 +277,18 @@ export const hcpIntegration = {
     return response.json();
   },
 
+  // Sync services from HCP
+  async syncServices() {
+    const response = await fetch(`${BACKEND_URL}/api/inventory/sync/hcp/services`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    
+    if (!response.ok) throw new Error(`Failed to sync services: ${response.statusText}`);
+    return response.json();
+  },
+
   // Get technicians
   async getTechnicians() {
     const response = await fetch(`${BACKEND_URL}/api/inventory/sync/hcp/technicians`, {
