@@ -191,6 +191,7 @@ const IntegrationsView: React.FC<IntegrationsViewProps> = ({
     const fetchLogs = async () => {
       try {
         const logs = await getSyncLogs(undefined, 20);
+        console.log('[IntegrationsView] Build v1.0.1 - Sync logs loaded:', logs?.length || 0, 'logs');
         setSyncLogs(logs || []);
       } catch (error) {
         console.error('Failed to fetch sync logs:', error);
