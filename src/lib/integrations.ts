@@ -1,6 +1,10 @@
 import { supabase } from './supabase';
 import * as apiClient from './apiClient';
 
+// OAuth and webhook endpoints must go to Railway backend directly
+// Sync endpoints use Netlify Functions for security
+const BACKEND_URL = import.meta.env.VITE_API_BASE_URL || '';
+
 // Integration status types
 export interface IntegrationStatus {
   platform: 'hcp' | 'qbd' | 'qbo';
@@ -17,7 +21,7 @@ export const qboIntegration = {
   // Get OAuth authorization URL
   async getAuthUrl(organizationId: string) {
     try {
-      const response = await fetch(`/api/oauth/qbo/authorize?org_id=${organizationId}`, {
+      const response = await fetch(`${BACKEND_URL}/api/oauth/qbo/authorize?org_id=${organizationId}`, {
         method: 'GET',
       });
       
@@ -42,7 +46,7 @@ export const qboIntegration = {
   // Refresh access token
   async refreshToken(organizationId: string) {
     try {
-      const response = await fetch(`/api/oauth/refresh/qbo`, {
+      const response = await fetch(`${BACKEND_URL}/api/oauth/refresh/qbo`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ organizationId })
@@ -62,7 +66,7 @@ export const qboIntegration = {
   // Disconnect
   async disconnect(organizationId: string) {
     try {
-      const response = await fetch(`/api/oauth/disconnect/qbo`, {
+      const response = await fetch(`${BACKEND_URL}/api/oauth/disconnect/qbo`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ organizationId })
@@ -81,7 +85,7 @@ export const qboIntegration = {
   // Get connection status
   async getStatus(organizationId: string = 'default'): Promise<IntegrationStatus> {
     try {
-      const response = await fetch(`/api/oauth/status/qbo?org_id=${organizationId}`, {
+      const response = await fetch(`${BACKEND_URL}/api/oauth/status/qbo?org_id=${organizationId}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -106,7 +110,7 @@ export const qboIntegration = {
   // Sync inventory items from QBO
   async syncItems(organizationId: string = 'default') {
     try {
-      const response = await fetch(`/api/sync/qbo/items`, {
+      const response = await fetch(`${BACKEND_URL}/api/sync/qbo/items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ organization_id: organizationId })
@@ -127,7 +131,7 @@ export const qboIntegration = {
   // Sync vendors from QBO
   async syncVendors(organizationId: string = 'default') {
     try {
-      const response = await fetch(`/api/sync/qbo/vendors`, {
+      const response = await fetch(`${BACKEND_URL}/api/sync/qbo/vendors`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ organization_id: organizationId })
@@ -148,7 +152,7 @@ export const qboIntegration = {
   // Create purchase order in QBO
   async createPurchaseOrder(vendorId: string, lines: any[], memo?: string, organizationId: string = 'default') {
     try {
-      const response = await fetch(`/api/sync/qbo/purchase-order`, {
+      const response = await fetch(`${BACKEND_URL}/api/sync/qbo/purchase-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -184,7 +188,7 @@ export const hcpIntegration = {
     // Use a fixed UUID for the default organization (in production, get from auth context)
     const organizationId = '00000000-0000-0000-0000-000000000001';
     
-    const response = await fetch(`/api/oauth/hcp/connect`, {
+    const response = await fetch(`${BACKEND_URL}/api/oauth/hcp/connect`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -205,7 +209,7 @@ export const hcpIntegration = {
   async disconnect() {
     const organizationId = '00000000-0000-0000-0000-000000000001'; // In production, get from auth context
     
-    const response = await fetch(`/api/oauth/disconnect/hcp`, {
+    const response = await fetch(`${BACKEND_URL}/api/oauth/disconnect/hcp`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -227,7 +231,7 @@ export const hcpIntegration = {
     const organizationId = '00000000-0000-0000-0000-000000000001'; // In production, get from auth context
     
     try {
-      const response = await fetch(`/api/oauth/status/hcp?org_id=${organizationId}`);
+      const response = await fetch(`${BACKEND_URL}/api/oauth/status/hcp?org_id=${organizationId}`);
       
       if (!response.ok) {
         const error = await response.json();
@@ -320,7 +324,7 @@ export const qbdIntegration = {
   // Get connection status
   async getStatus(organizationId: string = 'default'): Promise<IntegrationStatus> {
     try {
-      const response = await fetch(`/api/oauth/status/qbd?org_id=${organizationId}`, {
+      const response = await fetch(`${BACKEND_URL}/api/oauth/status/qbd?org_id=${organizationId}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -364,7 +368,7 @@ export const qbdIntegration = {
   // Download .qwc file for QBWC installation
   async downloadQWCFile(organizationId: string = 'default') {
     try {
-      const response = await fetch(`/api/qbwc/download-qwc?org_id=${organizationId}`, {
+      const response = await fetch(`${BACKEND_URL}/api/qbwc/download-qwc?org_id=${organizationId}`, {
         method: 'GET'
       });
       

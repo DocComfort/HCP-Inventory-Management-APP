@@ -302,7 +302,8 @@ const IntegrationsView: React.FC<IntegrationsViewProps> = ({
       // Auto-link items
       if (result.imported > 0 || result.updated > 0) {
         toast.info('Auto-linking items between systems...');
-        await fetch(`/api/inventory/sync/autolink`, {
+        const backendUrl = import.meta.env.VITE_API_BASE_URL || '';
+        await fetch(`${backendUrl}/api/inventory/sync/autolink`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ organization_id: organizationId })
