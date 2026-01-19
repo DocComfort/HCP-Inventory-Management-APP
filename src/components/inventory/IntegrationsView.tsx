@@ -577,16 +577,16 @@ const IntegrationsView: React.FC<IntegrationsViewProps> = ({
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900">
-                        {log.sync_type} sync - {log.platform.toUpperCase()}
+                        {log.sync_type} sync - {(log.provider || log.platform || "unknown").toUpperCase()}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {log.records_processed} records processed
+                        {(log.records_processed || 0)} records processed
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-medium text-gray-900 capitalize">{log.status}</p>
                       <p className="text-xs text-gray-500">
-                        {formatLastSync(log.started_at)}
+                        {formatLastSync((log.started_at || log.created_at))}
                       </p>
                     </div>
                   </div>
