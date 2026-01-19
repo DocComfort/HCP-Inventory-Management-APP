@@ -267,19 +267,69 @@ router.post('/sync/hcp/items', async (req, res) => {
       return res.status(400).json({ error: 'HCP not connected. Please authenticate first.' });
     }
     
-    // Fetch pricebook materials from HCP with retry logic
-    const materials = await RetryService.withRetry(async () => {
-      const response = await axios.get('https://api.housecallpro.com/api/price_book/materials', {
+    // First, fetch all material categories
+    console.log('📦 Fetching material categories from HCP...');
+    const categories = await RetryService.withRetry(async () => {
+      const response = await axios.get('https://api.housecallpro.com/api/price_book/material_categories', {
         headers: {
           'Authorization': `Token ${hcpToken}`,
           'Content-Type': 'application/json'
+        },
+        params: {
+          page: 1,
+          page_size: 100 // Get up to 100 categories per page
         }
       });
       
-      return response.data.materials || response.data.data || [];
+      return response.data.data || [];
     });
     
-    console.log(`📦 Retrieved ${materials.length} materials from HCP`);
+    console.log(`📦 Retrieved ${categories.length} material categories from HCP`);
+    
+    // Now fetch materials from each category
+    const allMaterials = [];
+    for (const category of categories) {
+      try {
+        console.log(`📦 Fetching materials from category: ${category.name} (${category.uuid})`);
+        
+        // Fetch materials for this category with pagination
+        let page = 1;
+        let hasMorePages = true;
+        
+        while (hasMorePages) {
+          const materialsResponse = await RetryService.withRetry(async () => {
+            const response = await axios.get('https://api.housecallpro.com/api/price_book/materials', {
+              headers: {
+                'Authorization': `Token ${hcpToken}`,
+                'Content-Type': 'application/json'
+              },
+              params: {
+                material_category_uuid: category.uuid,
+                page: page,
+                page_size: 100
+              }
+            });
+            
+            return response.data;
+          });
+          
+          const materials = materialsResponse.data || [];
+          allMaterials.push(...materials);
+          
+          console.log(`📦 Retrieved ${materials.length} materials from category ${category.name} (page ${page})`);
+          
+          // Check if there are more pages
+          hasMorePages = page < (materialsResponse.total_pages_count || 0);
+          page++;
+        }
+      } catch (error) {
+        console.error(`⚠️ Failed to fetch materials from category ${category.name}:`, error);
+        // Continue with other categories
+      }
+    }
+    
+    const materials = allMaterials;
+    console.log(`📦 Total materials retrieved from all categories: ${materials.length}`);
     
     let itemsCreated = 0;
     let itemsUpdated = 0;
@@ -287,14 +337,14 @@ router.post('/sync/hcp/items', async (req, res) => {
     // Process each material
     for (const material of materials) {
       try {
-        const { id, name, description, unit_cost, unit_price, service_item_id } = material;
+        const { uuid, name, description, cost, price, part_number, material_category_name } = material;
         
         // Check if item already exists
         const { data: existing } = await supabase
           .from('inventory_items')
           .select('id')
           .eq('organization_id', organizationId)
-          .eq('sku', service_item_id || id)
+          .eq('sku', part_number || uuid)
           .maybeSingle();
         
         if (existing) {
@@ -304,8 +354,8 @@ router.post('/sync/hcp/items', async (req, res) => {
             .update({
               name,
               description,
-              cost: unit_cost ? unit_cost / 100 : undefined, // Convert cents to dollars
-              price: unit_price ? unit_price / 100 : undefined,
+              cost: cost ? cost / 100 : undefined, // Convert cents to dollars
+              price: price ? price / 100 : undefined,
               last_updated: new Date().toISOString()
             })
             .eq('id', existing.id);
@@ -319,10 +369,10 @@ router.post('/sync/hcp/items', async (req, res) => {
               organization_id: organizationId,
               name,
               description,
-              sku: service_item_id || id,
-              cost: unit_cost ? unit_cost / 100 : 0,
-              price: unit_price ? unit_price / 100 : 0,
-              category: material.category_name || 'Uncategorized'
+              sku: part_number || uuid,
+              cost: cost ? cost / 100 : 0,
+              price: price ? price / 100 : 0,
+              category: material_category_name || 'Uncategorized'
             });
           
           itemsCreated++;
