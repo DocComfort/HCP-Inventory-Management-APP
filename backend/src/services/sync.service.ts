@@ -45,7 +45,7 @@ export class SyncService {
       
       /*
       // Fetch all items from HCP API (correct endpoint: /price_book/materials)
-      const response = await axios.get('https://api.housecallpro.com/price_book/materials', {
+      const response = await axios.get('https://api.housecallpro.com/api/price_book/materials', {
         headers: {
           'Authorization': `Token ${accessToken}`,
           'Content-Type': 'application/json'
