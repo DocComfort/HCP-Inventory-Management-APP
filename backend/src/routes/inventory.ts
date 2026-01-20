@@ -339,16 +339,16 @@ router.post('/sync/hcp/items', async (req, res) => {
       try {
         const { uuid, name, description, cost, price, part_number, material_category_name } = material;
         
-        // Check if item already exists by HCP ID
+        // Check if item already exists by HCP ID (try both old and new field names)
         const { data: existing } = await supabase
           .from('inventory_items')
           .select('id')
           .eq('organization_id', organizationId)
-          .eq('hcp_id', uuid)
+          .or(`hcp_item_id.eq.${uuid},hcp_id.eq.${uuid}`)
           .maybeSingle();
         
         if (existing) {
-          // Update existing item
+          // Update existing item (use old field names for compatibility)
           await supabase
             .from('inventory_items')
             .update({
@@ -357,26 +357,24 @@ router.post('/sync/hcp/items', async (req, res) => {
               unit_cost: cost ? cost / 100 : undefined, // Convert cents to dollars
               unit_price: price ? price / 100 : undefined,
               sku: part_number || uuid,
-              category: material_category_name || 'Uncategorized',
-              updated_at: new Date().toISOString()
+              category: material_category_name || 'Uncategorized'
             })
             .eq('id', existing.id);
           
           itemsUpdated++;
         } else {
-          // Create new item
+          // Create new item (use old field name for compatibility)
           await supabase
             .from('inventory_items')
             .insert({
               organization_id: organizationId,
-              hcp_id: uuid,
+              hcp_item_id: uuid,
               name,
               description,
               sku: part_number || uuid,
               unit_cost: cost ? cost / 100 : 0,
               unit_price: price ? price / 100 : 0,
-              category: material_category_name || 'Uncategorized',
-              item_type: 'material'
+              category: material_category_name || 'Uncategorized'
             });
           
           itemsCreated++;
@@ -474,30 +472,24 @@ router.post('/sync/hcp/services', async (req, res) => {
     
     for (const service of allServices) {
       try {
-        // Check if service already exists
+        // Check if service already exists (try both old and new field names)
         const { data: existing } = await supabase
           .from('inventory_items')
           .select('id')
-          .eq('hcp_id', service.uuid)
+          .or(`hcp_item_id.eq.${service.uuid},hcp_id.eq.${service.uuid}`)
           .eq('organization_id', organizationId)
-          .single();
+          .maybeSingle();
         
+        // Use old field name for compatibility (hcp_item_id instead of hcp_id)
         const itemData = {
           organization_id: organizationId,
-          hcp_id: service.uuid,
+          hcp_item_id: service.uuid,
           name: service.name,
           description: service.description || '',
           sku: service.task_number || service.uuid,
           category: service.category?.name || 'Service',
           unit_cost: service.cost ? service.cost / 100 : 0,
-          unit_price: service.price ? service.price / 100 : 0,
-          item_type: 'service',
-          taxable: service.taxable || false,
-          flat_rate_enabled: service.flat_rate_enabled || false,
-          online_booking_enabled: service.online_booking_enabled || false,
-          duration: service.duration || null,
-          image_url: service.image || null,
-          unit_of_measure: service.unit_of_measure || 'each'
+          unit_price: service.price ? service.price / 100 : 0
         };
         
         if (existing) {
