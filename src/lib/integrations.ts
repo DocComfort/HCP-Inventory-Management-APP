@@ -269,7 +269,10 @@ export const hcpIntegration = {
   async syncItems() {
     const response = await fetch(`${BACKEND_URL}/api/inventory/sync/hcp/items`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-integrations-key': import.meta.env.VITE_INTEGRATIONS_KEY || ''
+      },
       body: JSON.stringify({})
     });
     
@@ -281,7 +284,10 @@ export const hcpIntegration = {
   async syncServices() {
     const response = await fetch(`${BACKEND_URL}/api/inventory/sync/hcp/services`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-integrations-key': import.meta.env.VITE_INTEGRATIONS_KEY || ''
+      },
       body: JSON.stringify({})
     });
     
@@ -293,7 +299,10 @@ export const hcpIntegration = {
   async syncJobs(options?: { startDate?: string; endDate?: string; workStatus?: string[] }) {
     const response = await fetch(`${BACKEND_URL}/api/inventory/sync/hcp/jobs`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-integrations-key': import.meta.env.VITE_INTEGRATIONS_KEY || ''
+      },
       body: JSON.stringify(options || {})
     });
     
