@@ -269,20 +269,27 @@ router.post('/sync/hcp/items', async (req, res) => {
     
     // First, fetch all material categories
     console.log('📦 Fetching material categories from HCP...');
-    const categories = await RetryService.withRetry(async () => {
-      const response = await axios.get('https://api.housecallpro.com/api/price_book/material_categories', {
-        headers: {
-          'Authorization': `Token ${hcpToken}`,
-          'Content-Type': 'application/json'
-        },
-        params: {
-          page: 1,
-          page_size: 100 // Get up to 100 categories per page
-        }
+    
+    let categories = [];
+    try {
+      categories = await RetryService.withRetry(async () => {
+        const response = await axios.get('https://api.housecallpro.com/api/price_book/material_categories', {
+          headers: {
+            'Authorization': `Token ${hcpToken}`,
+            'Content-Type': 'application/json'
+          },
+          params: {
+            page: 1,
+            page_size: 100 // Get up to 100 categories per page
+          }
+        });
+        
+        return response.data.data || [];
       });
-      
-      return response.data.data || [];
-    });
+    } catch (error: any) {
+      console.error('❌ Failed to fetch material categories:', error.response?.status, error.response?.data || error.message);
+      throw new Error(`Failed to fetch material categories: ${error.response?.status} - ${JSON.stringify(error.response?.data) || error.message}`);
+    }
     
     console.log(`📦 Retrieved ${categories.length} material categories from HCP`);
     
