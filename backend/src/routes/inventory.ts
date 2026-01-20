@@ -259,7 +259,7 @@ router.post('/sync/hcp/invoices', async (req, res) => {
 router.post('/sync/hcp/items', async (req, res) => {
   try {
     const organizationId = '00000000-0000-0000-0000-000000000001';
-    console.log('📦 HCP items sync requested');
+    console.log('📦 HCP items sync requested - BUILD v1.0.3');
     
     // Get HCP API token
     const hcpToken = await oauthService.getHCPAccessToken(organizationId);
