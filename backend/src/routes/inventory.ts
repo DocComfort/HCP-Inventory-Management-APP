@@ -269,6 +269,8 @@ router.post('/sync/hcp/items', async (req, res) => {
     
     // First, fetch all material categories
     console.log('📦 Fetching material categories from HCP...');
+    console.log('🔑 Using token:', hcpToken ? `${hcpToken.substring(0, 10)}...` : 'MISSING');
+    console.log('🌐 Calling URL: https://api.housecallpro.com/api/price_book/material_categories');
     
     let categories = [];
     try {
@@ -284,10 +286,16 @@ router.post('/sync/hcp/items', async (req, res) => {
           }
         });
         
+        console.log('✅ Categories response status:', response.status);
+        console.log('📊 Categories data keys:', Object.keys(response.data));
+        
         return response.data.data || [];
       });
     } catch (error: any) {
-      console.error('❌ Failed to fetch material categories:', error.response?.status, error.response?.data || error.message);
+      console.error('❌ Failed to fetch material categories:');
+      console.error('   Status:', error.response?.status);
+      console.error('   URL:', error.config?.url);
+      console.error('   Data:', JSON.stringify(error.response?.data, null, 2));
       throw new Error(`Failed to fetch material categories: ${error.response?.status} - ${JSON.stringify(error.response?.data) || error.message}`);
     }
     
