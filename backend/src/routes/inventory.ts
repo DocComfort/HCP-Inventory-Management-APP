@@ -550,6 +550,242 @@ router.post('/sync/hcp/services', async (req, res) => {
   }
 });
 
+// Sync HCP jobs endpoint (for inventory and payroll tracking)
+router.post('/sync/hcp/jobs', async (req, res) => {
+  try {
+    const organizationId = '00000000-0000-0000-0000-000000000001';
+    const { startDate, endDate, workStatus } = req.body;
+    
+    console.log('📋 Syncing HCP jobs...');
+    console.log(`  Date range: ${startDate || 'all'} to ${endDate || 'all'}`);
+    console.log(`  Status filter: ${workStatus?.join(', ') || 'all statuses'}`);
+    
+    // Get HCP API token
+    const hcpToken = await oauthService.getHCPAccessToken(organizationId);
+    if (!hcpToken) {
+      return res.status(400).json({ error: 'HCP not connected. Please authenticate first.' });
+    }
+    
+    let allJobs: any[] = [];
+    let currentPage = 1;
+    let totalPages = 1;
+    
+    // Fetch all jobs with pagination
+    while (currentPage <= totalPages) {
+      console.log(`📄 Fetching jobs page ${currentPage}...`);
+      
+      const response = await RetryService.withRetry(async () => {
+        const params: any = {
+          page: currentPage,
+          page_size: 100,
+          sort_by: 'created_at',
+          sort_direction: 'desc',
+          expand: ['appointments'] // Include appointment details
+        };
+        
+        if (startDate) params.scheduled_start_min = startDate;
+        if (endDate) params.scheduled_end_max = endDate;
+        if (workStatus && workStatus.length > 0) params.work_status = workStatus;
+        
+        return await axios.get('https://api.housecallpro.com/jobs', {
+          headers: {
+            'Authorization': `Token ${hcpToken}`,
+            'Content-Type': 'application/json'
+          },
+          params
+        });
+      });
+      
+      const jobsData = response.data.jobs || [];
+      allJobs = allJobs.concat(jobsData);
+      
+      totalPages = response.data.total_pages || 1;
+      console.log(`✅ Page ${currentPage}/${totalPages}: ${jobsData.length} jobs`);
+      
+      currentPage++;
+    }
+    
+    console.log(`📊 Total jobs retrieved: ${allJobs.length}`);
+    
+    // Process and insert/update jobs
+    let insertedJobs = 0;
+    let updatedJobs = 0;
+    let materialsTracked = 0;
+    let employeesTracked = 0;
+    
+    for (const job of allJobs) {
+      try {
+        // Check if job already exists
+        const { data: existingJob } = await supabase
+          .from('jobs')
+          .select('id')
+          .eq('hcp_id', job.id)
+          .eq('organization_id', organizationId)
+          .single();
+        
+        // Normalize work_status (replace spaces with underscores)
+        const workStatus = job.work_status?.replace(/\s+/g, '_');
+        
+        const jobData = {
+          organization_id: organizationId,
+          hcp_id: job.id,
+          invoice_number: job.invoice_number,
+          description: job.description,
+          work_status: workStatus,
+          
+          // Customer info
+          customer_id: job.customer?.id,
+          customer_name: job.customer ? `${job.customer.first_name || ''} ${job.customer.last_name || ''}`.trim() : null,
+          customer_email: job.customer?.email,
+          customer_phone: job.customer?.mobile_number || job.customer?.home_number,
+          
+          // Address
+          address_street: job.address?.street,
+          address_city: job.address?.city,
+          address_state: job.address?.state,
+          address_zip: job.address?.zip,
+          
+          // Scheduling
+          scheduled_start: job.schedule?.scheduled_start,
+          scheduled_end: job.schedule?.scheduled_end,
+          arrival_window: job.schedule?.arrival_window,
+          
+          // Time tracking for payroll
+          on_my_way_at: job.work_timestamps?.on_my_way_at,
+          started_at: job.work_timestamps?.started_at,
+          completed_at: job.work_timestamps?.completed_at,
+          
+          // Financial
+          total_amount: job.total_amount,
+          outstanding_balance: job.outstanding_balance,
+          subtotal: job.subtotal,
+          
+          // Metadata
+          tags: job.tags || [],
+          lead_source: job.lead_source,
+          original_estimate_id: job.original_estimate_id,
+          recurrence_number: job.recurrence_number,
+          recurrence_rule: job.recurrence_rule,
+          
+          hcp_created_at: job.created_at,
+          hcp_updated_at: job.updated_at
+        };
+        
+        let jobId: string;
+        
+        if (existingJob) {
+          await supabase
+            .from('jobs')
+            .update(jobData)
+            .eq('id', existingJob.id);
+          jobId = existingJob.id;
+          updatedJobs++;
+        } else {
+          const { data: newJob } = await supabase
+            .from('jobs')
+            .insert(jobData)
+            .select('id')
+            .single();
+          jobId = newJob.id;
+          insertedJobs++;
+        }
+        
+        // Track assigned employees
+        if (job.assigned_employees && job.assigned_employees.length > 0) {
+          // Delete existing employee assignments
+          await supabase
+            .from('job_employees')
+            .delete()
+            .eq('job_id', jobId);
+          
+          // Insert new assignments
+          const employeeData = job.assigned_employees.map((emp: any) => ({
+            job_id: jobId,
+            employee_id: emp.id,
+            employee_name: `${emp.first_name || ''} ${emp.last_name || ''}`.trim(),
+            employee_email: emp.email,
+            role: emp.role,
+            color_hex: emp.color_hex
+          }));
+          
+          await supabase
+            .from('job_employees')
+            .insert(employeeData);
+          
+          employeesTracked += employeeData.length;
+        }
+        
+        // Track notes
+        if (job.notes && job.notes.length > 0) {
+          for (const note of job.notes) {
+            const { data: existingNote } = await supabase
+              .from('job_notes')
+              .select('id')
+              .eq('job_id', jobId)
+              .eq('hcp_note_id', note.id)
+              .single();
+            
+            if (!existingNote) {
+              await supabase
+                .from('job_notes')
+                .insert({
+                  job_id: jobId,
+                  hcp_note_id: note.id,
+                  content: note.content
+                });
+            }
+          }
+        }
+        
+      } catch (jobError: any) {
+        console.error(`⚠️ Error processing job ${job.id}:`, jobError.message);
+      }
+    }
+    
+    console.log(`✅ Jobs sync complete: ${insertedJobs} inserted, ${updatedJobs} updated`);
+    console.log(`👥 Employee assignments tracked: ${employeesTracked}`);
+    console.log(`📦 Materials tracked: ${materialsTracked}`);
+    
+    await supabase.from('sync_logs').insert({
+      organization_id: organizationId,
+      sync_type: 'hcp_jobs',
+      provider: 'hcp',
+      status: 'completed',
+      items_synced: allJobs.length,
+      metadata: {
+        inserted: insertedJobs,
+        updated: updatedJobs,
+        employees_tracked: employeesTracked,
+        materials_tracked: materialsTracked
+      }
+    });
+    
+    res.json({ 
+      success: true, 
+      message: `Synced ${allJobs.length} jobs from HCP (${insertedJobs} new, ${updatedJobs} updated)`,
+      stats: {
+        jobs: allJobs.length,
+        inserted: insertedJobs,
+        updated: updatedJobs,
+        employees: employeesTracked,
+        materials: materialsTracked
+      }
+    });
+  } catch (error: any) {
+    console.error('❌ Error syncing HCP jobs:', error.message);
+    
+    await supabase.from('sync_logs').insert({
+      organization_id: '00000000-0000-0000-0000-000000000001',
+      sync_type: 'hcp_jobs',
+      provider: 'hcp',
+      status: 'failed',
+      error_message: error.message
+    });
+    
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.get('/sync/hcp/technicians', async (req, res) => {
   try {
     const organizationId = '00000000-0000-0000-0000-000000000001';

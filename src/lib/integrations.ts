@@ -289,6 +289,18 @@ export const hcpIntegration = {
     return response.json();
   },
 
+  // Sync jobs from HCP (for inventory and payroll tracking)
+  async syncJobs(options?: { startDate?: string; endDate?: string; workStatus?: string[] }) {
+    const response = await fetch(`${BACKEND_URL}/api/inventory/sync/hcp/jobs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(options || {})
+    });
+    
+    if (!response.ok) throw new Error(`Failed to sync jobs: ${response.statusText}`);
+    return response.json();
+  },
+
   // Get technicians
   async getTechnicians() {
     const response = await fetch(`${BACKEND_URL}/api/inventory/sync/hcp/technicians`, {
