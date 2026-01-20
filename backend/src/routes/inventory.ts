@@ -339,12 +339,12 @@ router.post('/sync/hcp/items', async (req, res) => {
       try {
         const { uuid, name, description, cost, price, part_number, material_category_name } = material;
         
-        // Check if item already exists by HCP ID (try both old and new field names)
+        // Check if item already exists by HCP ID
         const { data: existing } = await supabase
           .from('inventory_items')
           .select('id')
           .eq('organization_id', organizationId)
-          .or(`hcp_item_id.eq.${uuid},hcp_id.eq.${uuid}`)
+          .eq('hcp_item_id', uuid)
           .maybeSingle();
         
         if (existing) {
@@ -472,12 +472,12 @@ router.post('/sync/hcp/services', async (req, res) => {
     
     for (const service of allServices) {
       try {
-        // Check if service already exists (try both old and new field names)
+        // Check if service already exists
         const { data: existing } = await supabase
           .from('inventory_items')
           .select('id')
-          .or(`hcp_item_id.eq.${service.uuid},hcp_id.eq.${service.uuid}`)
           .eq('organization_id', organizationId)
+          .eq('hcp_item_id', service.uuid)
           .maybeSingle();
         
         // Use old field name for compatibility (hcp_item_id instead of hcp_id)
