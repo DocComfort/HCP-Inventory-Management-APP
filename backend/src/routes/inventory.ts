@@ -413,17 +413,29 @@ router.post('/sync/hcp/items', async (req, res) => {
       message: `Successfully synced ${itemsCreated + itemsUpdated} items from HCP`
     });
   } catch (error: any) {
-    console.error('❌ Error syncing HCP items:', error.message);
+    const errorDetails = {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      url: error.config?.url
+    };
+    
+    console.error('❌ Error syncing HCP items:', JSON.stringify(errorDetails, null, 2));
     
     await supabase.from('sync_logs').insert({
       organization_id: '00000000-0000-0000-0000-000000000001',
       sync_type: 'hcp_items',
       provider: 'hcp',
       status: 'failed',
-      error_message: error.message
+      error_message: error.message,
+      metadata: errorDetails
     });
     
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      error: error.message,
+      details: errorDetails
+    });
   }
 });
 
