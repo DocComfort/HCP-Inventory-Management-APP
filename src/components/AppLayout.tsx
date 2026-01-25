@@ -17,6 +17,7 @@ import FulfillmentEngine from './inventory/FulfillmentEngine';
 import RestockView from './inventory/RestockView';
 import WarehouseView from './inventory/WarehouseView';
 import SettingsView from './inventory/SettingsView';
+import TimesheetsView from './inventory/TimesheetsView';
 
 // Data
 import { 
@@ -286,7 +287,8 @@ const AppLayout: React.FC = () => {
             onConfigureIntegration={handleConfigureIntegration}
           />
         );
-
+      case 'timesheets':
+        return <TimesheetsView />;
       case 'vendors':
         return (
           <VendorsView

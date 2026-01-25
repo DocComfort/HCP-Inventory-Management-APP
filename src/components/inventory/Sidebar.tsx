@@ -13,7 +13,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Zap,
-  RotateCcw
+  RotateCcw,
+  Clock
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -32,6 +33,7 @@ const menuItems = [
   { id: 'purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
   { id: 'fulfillment', label: 'Fulfillment Engine', icon: Zap },
   { id: 'restock', label: 'Auto-Restock', icon: RotateCcw },
+  { id: 'timesheets', label: 'Timesheets', icon: Clock },
   { id: 'integrations', label: 'Integrations', icon: Link2 },
   { id: 'vendors', label: 'Vendors', icon: Users },
   { id: 'settings', label: 'Settings', icon: Settings },

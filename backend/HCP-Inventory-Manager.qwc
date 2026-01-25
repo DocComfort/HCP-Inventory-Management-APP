@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<QBWCXML>
+  <AppName>HCP Inventory Manager</AppName>
+  <AppID></AppID>
+  <AppURL>https://hcp-inventory-management-app-production.up.railway.app/qbwc</AppURL>
+  <AppDescription>Sync inventory between HousecallPro and QuickBooks Desktop</AppDescription>
+  <AppSupport>https://hcp-inventory-management-app.netlify.app</AppSupport>
+  <UserName>admin</UserName>
+  <OwnerID>{90A44FB7-33D9-4815-AC85-AC7932EADDCA}</OwnerID>
+  <FileID>{8C9A4F6E-7D3B-4B5E-9F2C-1E8D7C6B5A4F}</FileID>
+  <QBType>QBFS</QBType>
+  <Scheduler>
+    <RunEveryNMinutes>30</RunEveryNMinutes>
+  </Scheduler>
+  <IsReadOnly>false</IsReadOnly>
+  <PersonalDataPref>
+    <PersonalDataPrefType>pdpOptional</PersonalDataPrefType>
+  </PersonalDataPref>
+  <UnattendedModePref>
+    <UnattendedModePrefType>umpOptional</UnattendedModePrefType>
+  </UnattendedModePref>
+  <AuthFlags>
+    <AuthFlag>
+      <Name>PersonalDataPref</Name>
+      <Value>0</Value>
+    </AuthFlag>
+  </AuthFlags>
+</QBWCXML>

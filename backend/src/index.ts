@@ -7,6 +7,7 @@ import { qbwcRouter, initializeSoapService } from './routes/qbwc.js';
 import { oauthRouter } from './routes/oauth.js';
 import { webhookRouter } from './routes/webhooks.js';
 import { inventoryRouter } from './routes/inventory.js';
+import { timesheetsRouter } from './routes/timesheets.js';
 import { JobSyncService } from './services/jobSync.service.js';
 import { validateEnv, getAllowedOrigins } from './config/env.js';
 import { requestIdMiddleware } from './middleware/requestId.js';
@@ -118,6 +119,7 @@ app.use('/api/oauth', oauthRouter);
 app.use('/oauth', oauthRouter); // Legacy route for backward compatibility
 app.use('/api/webhooks', webhookRouter);
 app.use('/api/inventory', inventoryRouter);
+app.use('/api', timesheetsRouter); // Timesheets endpoint
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

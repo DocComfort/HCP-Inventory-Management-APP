@@ -258,6 +258,116 @@ export class QBWCService {
   }
 
   /**
+   * Queue timesheet entries for QB Desktop sync
+   */
+  async queueTimesheetExport(
+    jobId: string,
+    organizationId: string
+  ): Promise<void> {
+    console.log(`Queueing timesheet export for job: ${jobId}`);
+    
+    // Get job details with employee assignments
+    const { data: job, error: jobError } = await supabase
+      .from('jobs')
+      .select(`
+        *,
+        job_employees (
+          employee_id,
+          employee_name,
+          role,
+          employee_email
+        )
+      `)
+      .eq('id', jobId)
+      .single();
+    
+    if (jobError || !job) {
+      throw new Error('Job not found');
+    }
+    
+    if (!job.started_at || !job.completed_at) {
+      throw new Error('Job must have start and completion times for timesheet export');
+    }
+    
+    // Calculate hours
+    const startTime = new Date(job.started_at);
+    const endTime = new Date(job.completed_at);
+    const hoursWorked = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+    
+    // Format date for QB (YYYY-MM-DD)
+    const txnDate = startTime.toISOString().split('T')[0];
+    
+    // Create timesheet entry for each employee
+    for (const employee of job.job_employees || []) {
+      const qbxml = this.buildTimeTrackingXML({
+        txnDate,
+        employeeRef: employee.employee_id,
+        customerRef: job.customer_id || job.customer_name,
+        serviceItemRef: job.work_type || 'Labor',
+        duration: `PT${Math.floor(hoursWorked)}H${Math.round((hoursWorked % 1) * 60)}M`,
+        notes: `Job #${job.invoice_number}: ${job.description || ''}`
+      });
+      
+      // Insert into queue
+      const { error: queueError } = await supabase
+        .from('qbwc_queue')
+        .insert({
+          organization_id: organizationId,
+          request_type: 'TimeTracking',
+          qbxml_request: qbxml,
+          status: 'pending',
+          priority: 3,
+          attempts: 0,
+          max_attempts: 3
+        });
+      
+      if (queueError) {
+        console.error(`Failed to queue timesheet for employee ${employee.employee_name}:`, queueError);
+      }
+    }
+    
+    console.log(`Timesheet export queued for ${job.job_employees?.length || 0} employees`);
+  }
+
+  /**
+   * Build TimeTracking IAdd qbXML
+   */
+  private buildTimeTrackingXML(params: {
+    txnDate: string;
+    employeeRef: string;
+    customerRef: string;
+    serviceItemRef: string;
+    duration: string;
+    notes?: string;
+  }): string {
+    const { txnDate, employeeRef, customerRef, serviceItemRef, duration, notes } = params;
+    
+    return `<?xml version="1.0" encoding="utf-8"?>
+<?qbxml version="13.0"?>
+<QBXML>
+  <QBXMLMsgsRq onError="continueOnError">
+    <TimeTrackingAddRq>
+      <TimeTrackingAdd>
+        <TxnDate>${txnDate}</TxnDate>
+        <EntityRef>
+          <FullName>${employeeRef}</FullName>
+        </EntityRef>
+        <CustomerRef>
+          <FullName>${customerRef}</FullName>
+        </CustomerRef>
+        <ItemServiceRef>
+          <FullName>${serviceItemRef}</FullName>
+        </ItemServiceRef>
+        <Duration>${duration}</Duration>
+        <IsBillable>true</IsBillable>
+        ${notes ? `<Notes>${notes}</Notes>` : ''}
+      </TimeTrackingAdd>
+    </TimeTrackingAddRq>
+  </QBXMLMsgsRq>
+</QBXML>`;
+  }
+
+  /**
    * Create sync log entry
    */
   private async createSyncLog(
