@@ -11,7 +11,7 @@ const qwcConfig = {
   appName: 'HCP Inventory Manager',
   appURL: 'https://hcp-inventory-management-app-production.up.railway.app/qbwc',
   appDescription: 'Sync inventory between HousecallPro and QuickBooks Desktop',
-  appSupport: 'https://hcp-inventory-management-app.netlify.app',
+  appSupport: 'https://hcp-inventory-management-app-production.up.railway.app',
   userName: 'admin',
   ownerID: '{90A44FB7-33D9-4815-AC85-AC7932EADDCA}',
   fileID: '{8C9A4F6E-7D3B-4B5E-9F2C-1E8D7C6B5A4F}',
