@@ -66,14 +66,12 @@ export function validateEnv(): Env {
     }
     
     return env;
-  } catch (error: any) {
+  } catch (error) {
     if (error instanceof z.ZodError) {
       console.error('❌ Environment validation failed:');
-      if (error.errors && Array.isArray(error.errors)) {
-        error.errors.forEach((err: any) => {
-          console.error(`  - ${err.path.join('.')}: ${err.message}`);
-        });
-      }
+      error.issues.forEach((err) => {
+        console.error(`  - ${err.path.join('.')}: ${err.message}`);
+      });
       console.error('\n💡 Tip: Check your .env file and ensure all required variables are set');
       console.error('Required variables: ALLOWED_ORIGINS, SUPABASE_URL, SUPABASE_SERVICE_KEY, HCP_CLIENT_ID, HCP_CLIENT_SECRET, HCP_REDIRECT_URI');
       process.exit(1);

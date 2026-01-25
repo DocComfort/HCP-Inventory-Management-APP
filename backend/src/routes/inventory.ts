@@ -244,13 +244,17 @@ router.post('/sync/hcp/invoices', async (req, res) => {
     }
     
     // Log failed sync
-    await supabase.from('sync_logs').insert({
-      organization_id: '00000000-0000-0000-0000-000000000001',
-      sync_type: 'hcp_invoices',
-      provider: 'hcp',
-      status: 'failed',
-      error_message: errorMessage
-    }).catch((err: any) => console.error('Failed to log error:', err));
+    try {
+      await supabase.from('sync_logs').insert({
+        organization_id: '00000000-0000-0000-0000-000000000001',
+        sync_type: 'hcp_invoices',
+        provider: 'hcp',
+        status: 'failed',
+        error_message: errorMessage
+      });
+    } catch (logError) {
+      console.error('Failed to log error:', logError);
+    }
     
     sendError(res, errorCode, errorMessage, statusCode);
   }
@@ -690,7 +694,7 @@ router.post('/sync/hcp/jobs', async (req, res) => {
           hcp_updated_at: job.updated_at
         };
         
-        let jobId: string;
+        let jobId: string | undefined;
         
         if (existingJob) {
           await supabase
@@ -711,8 +715,8 @@ router.post('/sync/hcp/jobs', async (req, res) => {
           }
         }
         
-        // Track assigned employees
-        if (job.assigned_employees && job.assigned_employees.length > 0) {
+        // Track assigned employees (only if job was created/updated successfully)
+        if (jobId && job.assigned_employees && job.assigned_employees.length > 0) {
           // Delete existing employee assignments
           await supabase
             .from('job_employees')
@@ -736,8 +740,8 @@ router.post('/sync/hcp/jobs', async (req, res) => {
           employeesTracked += employeeData.length;
         }
         
-        // Track notes
-        if (job.notes && job.notes.length > 0) {
+        // Track notes (only if job was created/updated successfully)
+        if (jobId && job.notes && job.notes.length > 0) {
           for (const note of job.notes) {
             const { data: existingNote } = await supabase
               .from('job_notes')
