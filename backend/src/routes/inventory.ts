@@ -250,7 +250,7 @@ router.post('/sync/hcp/invoices', async (req, res) => {
       provider: 'hcp',
       status: 'failed',
       error_message: errorMessage
-    }).catch(err => console.error('Failed to log error:', err));
+    }).catch((err: any) => console.error('Failed to log error:', err));
     
     sendError(res, errorCode, errorMessage, statusCode);
   }
@@ -705,8 +705,10 @@ router.post('/sync/hcp/jobs', async (req, res) => {
             .insert(jobData)
             .select('id')
             .single();
-          jobId = newJob.id;
-          insertedJobs++;
+          if (newJob) {
+            jobId = newJob.id;
+            insertedJobs++;
+          }
         }
         
         // Track assigned employees
