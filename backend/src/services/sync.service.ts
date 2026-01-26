@@ -30,20 +30,6 @@ export class SyncService {
       const accessToken = await this.oauth2Service.getHCPAccessToken(organizationId);
       console.log('✅ HCP API key retrieved successfully');
       
-      // TODO: Implement actual HCP items API call
-      // The HCP API endpoint for items needs to be verified from their documentation
-      // For now, return success to allow testing other features
-      console.log('⚠️  HCP items import not yet implemented - returning success for testing');
-      
-      await this.logSync(organizationId, 'hcp', 'import', 0, 0);
-      
-      return { 
-        imported: 0, 
-        updated: 0, 
-        errors: 0 
-      };
-      
-      /*
       // Fetch all items from HCP API (correct endpoint: /price_book/materials)
       const response = await axios.get('https://api.housecallpro.com/api/price_book/materials', {
         headers: {
@@ -122,7 +108,7 @@ export class SyncService {
 
       console.log(`HCP import complete: ${imported} imported, ${updated} updated, ${errors} errors`);
       return { imported, updated, errors };
-      */
+
 
     } catch (error: any) {
       console.error('HCP import failed:', error);
