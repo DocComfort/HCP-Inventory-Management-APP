@@ -8,6 +8,7 @@ import { oauthRouter } from './routes/oauth.js';
 import { webhookRouter } from './routes/webhooks.js';
 import { inventoryRouter } from './routes/inventory.js';
 import { timesheetsRouter } from './routes/timesheets.js';
+import locationsRouter from './routes/locations.js';
 import { JobSyncService } from './services/jobSync.service.js';
 import { validateEnv, getAllowedOrigins } from './config/env.js';
 import { requestIdMiddleware } from './middleware/requestId.js';
@@ -120,6 +121,7 @@ app.use('/oauth', oauthRouter); // Legacy route for backward compatibility
 app.use('/api/webhooks', webhookRouter);
 app.use('/api/inventory', inventoryRouter);
 app.use('/api', timesheetsRouter); // Timesheets endpoint
+app.use('/api/locations', locationsRouter); // Locations (warehouses, vans)
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

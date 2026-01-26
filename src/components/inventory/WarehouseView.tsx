@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Warehouse, 
   Package, 
@@ -9,9 +9,17 @@ import {
   AlertTriangle,
   CheckCircle2,
   ArrowLeftRight,
-  Download
+  Download,
+  Plus,
+  Edit,
+  Trash2,
+  Settings
 } from 'lucide-react';
 import { InventoryItem, Location } from '@/types/inventory';
+import { toast } from 'sonner';
+import LocationModal from './LocationModal';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 interface WarehouseViewProps {
   inventory: InventoryItem[];
@@ -27,8 +35,31 @@ const WarehouseView: React.FC<WarehouseViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [stockFilter, setStockFilter] = useState<string>('all');
+  const [showModal, setShowModal] = useState(false);
+  const [editingWarehouse, setEditingWarehouse] = useState<Location | null>(null);
+  const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>(warehouse?.id || 'loc-wh-001');
 
-  const warehouseId = warehouse?.id || 'loc-wh-001';
+  // Fetch warehouses from API
+  useEffect(() => {
+    const fetchWarehouses = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/locations?type=warehouse`);
+        if (response.ok) {
+          const data = await response.json();
+          setWarehouses(data.locations || []);
+          if (data.locations?.length > 0 && !selectedWarehouseId) {
+            setSelectedWarehouseId(data.locations[0].id);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch warehouses:', error);
+      }
+    };
+    fetchWarehouses();
+  }, []);
+
+  const warehouseId = selectedWarehouseId || warehouse?.id || 'loc-wh-001';
 
   const warehouseInventory = useMemo(() => {
     return inventory.map(item => ({
@@ -100,18 +131,115 @@ const WarehouseView: React.FC<WarehouseViewProps> = ({
     };
   };
 
+  const handleAddWarehouse = () => {
+    setEditingWarehouse(null);
+    setShowModal(true);
+  };
+
+  const handleEditWarehouse = (wh: any) => {
+    setEditingWarehouse(wh);
+    setShowModal(true);
+  };
+
+  const handleDeleteWarehouse = async (warehouseId: string) => {
+    if (!confirm('Are you sure you want to delete this warehouse?')) return;
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/locations/${warehouseId}`, {
+        method: 'DELETE',
+        headers: {
+          'x-integrations-key': import.meta.env.VITE_INTEGRATIONS_KEY || ''
+        }
+      });
+      
+      if (response.ok) {
+        toast.success('Warehouse deleted successfully');
+        setWarehouses(warehouses.filter(w => w.id !== warehouseId));
+        if (selectedWarehouseId === warehouseId && warehouses.length > 1) {
+          setSelectedWarehouseId(warehouses.find(w => w.id !== warehouseId)?.id || '');
+        }
+      } else {
+        toast.error('Failed to delete warehouse');
+      }
+    } catch (error) {
+      toast.error('Failed to delete warehouse');
+    }
+  };
+
+  const handleSaveWarehouse = (location: any) => {
+    if (editingWarehouse) {
+      setWarehouses(warehouses.map(w => w.id === location.id ? location : w));
+    } else {
+      setWarehouses([...warehouses, location]);
+    }
+    setSelectedWarehouseId(location.id);
+  };
+
+  const currentWarehouse = warehouses.find(w => w.id === selectedWarehouseId) || warehouse;
+
   return (
     <div className="p-6 space-y-6">
+      {/* Location Modal */}
+      <LocationModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onSave={handleSaveWarehouse}
+        location={editingWarehouse}
+        type="warehouse"
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Main Warehouse</h1>
-          <p className="text-gray-500 mt-1">Central inventory hub and distribution center</p>
+        <div className="flex items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {currentWarehouse?.name || 'Main Warehouse'}
+            </h1>
+            <p className="text-gray-500 mt-1">
+              {currentWarehouse?.address || 'Central inventory hub and distribution center'}
+            </p>
+          </div>
+          {warehouses.length > 1 && (
+            <select
+              value={selectedWarehouseId}
+              onChange={(e) => setSelectedWarehouseId(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm"
+            >
+              {warehouses.map(wh => (
+                <option key={wh.id} value={wh.id}>{wh.name}</option>
+              ))}
+            </select>
+          )}
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-          <Download className="w-4 h-4" />
-          Export Report
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={handleAddWarehouse}
+            className="flex items-center gap-2 px-4 py-2 bg-[#1a365d] text-white rounded-lg hover:bg-[#1a365d]/90 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add Warehouse
+          </button>
+          {currentWarehouse && warehouses.length > 0 && (
+            <>
+              <button 
+                onClick={() => handleEditWarehouse(currentWarehouse)}
+                className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                <Edit className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={() => handleDeleteWarehouse(selectedWarehouseId)}
+                className="flex items-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </>
+          )}
+          <button className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+            <Download className="w-4 h-4" />
+            Export Report
+          </button>
+        </div>
       </div>
 
       {/* Stats */}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Truck, 
   User, 
@@ -10,9 +10,16 @@ import {
   Settings,
   TrendingUp,
   TrendingDown,
-  ArrowLeftRight
+  ArrowLeftRight,
+  Plus,
+  Edit,
+  Trash2
 } from 'lucide-react';
 import { Location, InventoryItem } from '@/types/inventory';
+import { toast } from 'sonner';
+import LocationModal from './LocationModal';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 interface VansViewProps {
   locations: Location[];
@@ -30,7 +37,27 @@ const VansView: React.FC<VansViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedVan, setSelectedVan] = useState<string | null>(null);
   const [showActiveOnly, setShowActiveOnly] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [editingVan, setEditingVan] = useState<Location | null>(null);
+  const [apiVans, setApiVans] = useState<any[]>([]);
 
+  // Fetch vans from API
+  useEffect(() => {
+    const fetchVans = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/locations?type=van`);
+        if (response.ok) {
+          const data = await response.json();
+          setApiVans(data.locations || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch vans:', error);
+      }
+    };
+    fetchVans();
+  }, []);
+
+  // Merge mock locations with API vans
   const vans = locations.filter(loc => loc.type === 'van');
   
   const filteredVans = vans.filter(van => {
@@ -78,6 +105,48 @@ const VansView: React.FC<VansViewProps> = ({
     setSelectedVan(selectedVan === van.id ? null : van.id);
   };
 
+  const handleAddVan = () => {
+    setEditingVan(null);
+    setShowModal(true);
+  };
+
+  const handleEditVan = (van: Location, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingVan(van);
+    setShowModal(true);
+  };
+
+  const handleDeleteVan = async (vanId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('Are you sure you want to delete this van?')) return;
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/locations/${vanId}`, {
+        method: 'DELETE',
+        headers: {
+          'x-integrations-key': import.meta.env.VITE_INTEGRATIONS_KEY || ''
+        }
+      });
+      
+      if (response.ok) {
+        toast.success('Van deleted successfully');
+        setApiVans(apiVans.filter(v => v.id !== vanId));
+      } else {
+        toast.error('Failed to delete van');
+      }
+    } catch (error) {
+      toast.error('Failed to delete van');
+    }
+  };
+
+  const handleSaveVan = (location: any) => {
+    if (editingVan) {
+      setApiVans(apiVans.map(v => v.id === location.id ? location : v));
+    } else {
+      setApiVans([...apiVans, location]);
+    }
+  };
+
   // Overall stats
   const activeVans = vans.filter(v => v.isActive).length;
   const totalVanUnits = inventory.reduce((sum, item) => sum + item.totalVanQOH, 0);
@@ -88,12 +157,28 @@ const VansView: React.FC<VansViewProps> = ({
 
   return (
     <div className="p-6 space-y-6">
+      {/* Location Modal */}
+      <LocationModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onSave={handleSaveVan}
+        location={editingVan}
+        type="van"
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Technician Vans</h1>
           <p className="text-gray-500 mt-1">Monitor and manage mobile inventory locations</p>
         </div>
+        <button
+          onClick={handleAddVan}
+          className="flex items-center gap-2 px-4 py-2 bg-[#1a365d] text-white rounded-lg hover:bg-[#1a365d]/90 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          Add Van
+        </button>
       </div>
 
       {/* Overview Stats */}
