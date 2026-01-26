@@ -58,7 +58,11 @@ export default function TimesheetsView() {
       if (endDate) params.append('end_date', endDate);
       if (selectedEmployee !== 'all') params.append('employee_id', selectedEmployee);
 
-      const response = await fetch(`${API_BASE_URL}/api/timesheets?${params}`);
+      const response = await fetch(`${API_BASE_URL}/api/timesheets?${params}`, {
+        headers: {
+          'x-integrations-key': import.meta.env.VITE_INTEGRATIONS_KEY || ''
+        }
+      });
       const data = await response.json();
 
       if (data.success) {

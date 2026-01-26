@@ -252,6 +252,7 @@ const IntegrationsView: React.FC<IntegrationsViewProps> = ({
       if (platform === 'hcp') {
         await hcpIntegration.syncInvoices();
         await hcpIntegration.syncItems();
+        await hcpIntegration.syncJobs();
       } else if (platform === 'qbo') {
         await qboIntegration.syncItems();
         await qboIntegration.syncVendors();
@@ -262,6 +263,16 @@ const IntegrationsView: React.FC<IntegrationsViewProps> = ({
       onRefreshSync(platform);
     } catch (error: any) {
       toast.error(error.message || 'Sync failed');
+    }
+  };
+
+  const handleSyncJobs = async () => {
+    toast.info('Syncing jobs from Housecall Pro...');
+    try {
+      const result = await hcpIntegration.syncJobs();
+      toast.success(`Jobs synced: ${result.inserted || 0} new, ${result.updated || 0} updated`);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to sync jobs');
     }
   };
 
@@ -753,6 +764,45 @@ const IntegrationsView: React.FC<IntegrationsViewProps> = ({
                     </div>
                   </div>
                 </div>
+
+                {/* Data Sync Actions - HCP specific */}
+                {activeTab === 'hcp' && (
+                  <div className="bg-white rounded-xl border border-gray-200 p-6">
+                    <h3 className="font-semibold text-gray-900 mb-4">Data Sync Actions</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <button
+                        onClick={() => hcpIntegration.syncItems().then(() => toast.success('Materials synced!')).catch((e) => toast.error(e.message))}
+                        className="flex items-center gap-3 p-4 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors"
+                      >
+                        <Database className="w-6 h-6 text-blue-600" />
+                        <div className="text-left">
+                          <p className="font-medium text-gray-900">Sync Materials</p>
+                          <p className="text-sm text-gray-500">Import products/items from HCP</p>
+                        </div>
+                      </button>
+                      <button
+                        onClick={handleSyncJobs}
+                        className="flex items-center gap-3 p-4 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg transition-colors"
+                      >
+                        <Clock className="w-6 h-6 text-purple-600" />
+                        <div className="text-left">
+                          <p className="font-medium text-gray-900">Sync Jobs</p>
+                          <p className="text-sm text-gray-500">Import jobs for timesheets</p>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => hcpIntegration.syncInvoices().then((r) => toast.success(`Synced ${r.count || 0} invoices!`)).catch((e) => toast.error(e.message))}
+                        className="flex items-center gap-3 p-4 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg transition-colors"
+                      >
+                        <Activity className="w-6 h-6 text-green-600" />
+                        <div className="text-left">
+                          <p className="font-medium text-gray-900">Sync Invoices</p>
+                          <p className="text-sm text-gray-500">Import completed invoices</p>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Configuration */}
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
