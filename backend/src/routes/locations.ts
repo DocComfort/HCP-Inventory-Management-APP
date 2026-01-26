@@ -305,7 +305,7 @@ router.get('/hcp/employees', async (req, res) => {
       throw new Error(`HCP API error: ${response.status}`);
     }
     
-    const data = await response.json();
+    const data = await response.json() as { employees?: any[] };
     
     sendSuccess(res, { employees: data.employees || [] });
   } catch (error: any) {
