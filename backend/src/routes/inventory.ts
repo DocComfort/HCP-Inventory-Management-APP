@@ -17,7 +17,8 @@ router.use('/sync', validateIntegrationsKey);
 // Get all inventory items
 router.get('/items', async (req, res) => {
   try {
-    const organizationId = req.query.org_id as string;
+    const organizationId = req.query.org_id as string || '00000000-0000-0000-0000-000000000001';
+    console.log('📦 Fetching inventory items for org:', organizationId);
     
     const { data, error } = await supabase
       .from('inventory_items')
@@ -26,8 +27,10 @@ router.get('/items', async (req, res) => {
     
     if (error) throw error;
     
-    res.json(data);
+    console.log(`📦 Found ${data?.length || 0} inventory items`);
+    res.json(data || []);
   } catch (error: any) {
+    console.error('❌ Error fetching items:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
