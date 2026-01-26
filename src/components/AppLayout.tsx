@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
@@ -18,6 +18,8 @@ import RestockView from './inventory/RestockView';
 import WarehouseView from './inventory/WarehouseView';
 import SettingsView from './inventory/SettingsView';
 import TimesheetsView from './inventory/TimesheetsView';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 // Data
 import { 
@@ -50,14 +52,90 @@ const AppLayout: React.FC = () => {
   // State
   const [activeView, setActiveView] = useState('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [loading, setLoading] = useState(true);
   
-  // Data state (in a real app, this would come from API/database)
-  const [inventory, setInventory] = useState<InventoryItem[]>(inventoryItems);
-  const [transfers, setTransfers] = useState<TransferRequest[]>(transferRequests);
-  const [pos, setPOs] = useState<PurchaseOrder[]>(purchaseOrders);
+  // Data state - fetch from API
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [apiLocations, setApiLocations] = useState<Location[]>([]);
+  const [transfers, setTransfers] = useState<TransferRequest[]>([]);
+  const [pos, setPOs] = useState<PurchaseOrder[]>([]);
   const [syncs, setSyncs] = useState<SyncStatus[]>(syncStatuses);
-  const [invoices] = useState<HCPInvoice[]>(recentInvoices);
-  const [restocks, setRestocks] = useState<RestockOrder[]>(restockOrders);
+  const [invoices, setInvoices] = useState<HCPInvoice[]>([]);
+  const [restocks, setRestocks] = useState<RestockOrder[]>([]);
+
+  // Fetch data from API on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      const orgId = '00000000-0000-0000-0000-000000000001';
+      
+      try {
+        // Fetch inventory items
+        const itemsRes = await fetch(`${API_BASE_URL}/api/inventory/items?org_id=${orgId}`);
+        if (itemsRes.ok) {
+          const itemsData = await itemsRes.json();
+          // Transform API data to match InventoryItem type
+          const transformedItems: InventoryItem[] = (itemsData || []).map((item: any) => ({
+            id: item.id,
+            sku: item.sku || '',
+            name: item.name || '',
+            description: item.description || '',
+            category: item.category || 'General',
+            unitCost: item.unit_cost || 0,
+            unitPrice: item.unit_price || 0,
+            preferredVendorId: item.preferred_vendor_id,
+            totalQOH: item.total_qoh || 0,
+            warehouseQOH: item.warehouse_qoh || 0,
+            totalVanQOH: item.total_van_qoh || 0,
+            status: item.status || 'in_stock',
+            hcpItemId: item.hcp_item_id,
+            qbdItemId: item.qbd_item_id,
+            qboItemId: item.qbo_item_id,
+            locationStock: (item.location_stock || []).reduce((acc: any, stock: any) => {
+              acc[stock.location_id] = {
+                quantity: stock.quantity || 0,
+                parLevel: stock.par_level || 0,
+                deviation: (stock.quantity || 0) - (stock.par_level || 0)
+              };
+              return acc;
+            }, {})
+          }));
+          setInventory(transformedItems);
+          console.log(`📦 Loaded ${transformedItems.length} inventory items`);
+        }
+
+        // Fetch locations
+        const locationsRes = await fetch(`${API_BASE_URL}/api/locations`);
+        if (locationsRes.ok) {
+          const locData = await locationsRes.json();
+          const transformedLocations: Location[] = (locData.locations || []).map((loc: any) => ({
+            id: loc.id,
+            name: loc.name,
+            type: loc.type,
+            technicianName: loc.technician_name,
+            technicianId: loc.technician_id,
+            isActive: loc.is_active !== false,
+            address: loc.address
+          }));
+          setApiLocations(transformedLocations);
+          console.log(`📍 Loaded ${transformedLocations.length} locations`);
+        }
+
+      } catch (error) {
+        console.error('Failed to fetch data:', error);
+        // Fall back to mock data on error
+        setInventory(inventoryItems);
+        setApiLocations(locations);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Merge mock locations with API locations (use API if available)
+  const allLocations = apiLocations.length > 0 ? apiLocations : locations;
 
   // Calculate pending approvals
   const pendingApprovals = transfers.filter(t => t.status === 'pending').length + 
@@ -196,7 +274,7 @@ const AppLayout: React.FC = () => {
     }, 3000);
   }, []);
 
-  const warehouse = locations.find(loc => loc.type === 'warehouse');
+  const warehouse = allLocations.find(loc => loc.type === 'warehouse');
 
   // Render active view
   const renderView = () => {
@@ -207,7 +285,7 @@ const AppLayout: React.FC = () => {
             inventory={inventory}
             transfers={transfers}
             purchaseOrders={pos}
-            locations={locations}
+            locations={allLocations}
             recentInvoices={invoices}
             onNavigate={setActiveView}
           />
@@ -233,7 +311,7 @@ const AppLayout: React.FC = () => {
       case 'vans':
         return (
           <VansView
-            locations={locations}
+            locations={allLocations}
             inventory={inventory}
             onSelectVan={handleSelectVan}
             onEditParLevels={handleEditParLevels}
@@ -243,7 +321,7 @@ const AppLayout: React.FC = () => {
         return (
           <TransfersView
             transfers={transfers}
-            locations={locations}
+            locations={allLocations}
             inventory={inventory}
             onApprove={handleApproveTransfer}
             onReject={handleRejectTransfer}
@@ -265,7 +343,7 @@ const AppLayout: React.FC = () => {
         return (
           <FulfillmentEngine
             inventory={inventory}
-            locations={locations}
+            locations={allLocations}
           />
         );
       case 'restock':
@@ -273,7 +351,7 @@ const AppLayout: React.FC = () => {
           <RestockView
             restockOrders={restocks}
             inventory={inventory}
-            locations={locations}
+            locations={allLocations}
             onApproveRestock={handleApproveRestock}
             onProcessRestock={handleProcessRestock}
           />
@@ -307,7 +385,7 @@ const AppLayout: React.FC = () => {
             inventory={inventory}
             transfers={transfers}
             purchaseOrders={pos}
-            locations={locations}
+            locations={allLocations}
             recentInvoices={invoices}
             onNavigate={setActiveView}
           />
